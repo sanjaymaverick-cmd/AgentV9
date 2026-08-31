@@ -4,7 +4,7 @@ import { MissionPathChoice } from '../types/game';
 import type { GameEngine } from './gameEngine';
 import { soundEngine } from './audio';
 import { MISSION } from './tunables';
-import { STORY_MISSION_MIDNIGHT_PROTOTYPE } from './missionEngine';
+import { STORY_MISSION_MIDNIGHT_PROTOTYPE, applyStepComplete, applyMissionComplete } from './missionEngine';
 import { pointInAabb } from './collision';
 
 /**
@@ -124,10 +124,7 @@ export class MissionRunner {
   checkStep(stepId: string, path: MissionPathChoice) {
     const e = this.e;
     const step = e.state.activeMission.steps.find((s) => s.id === stepId);
-    if (step && !step.completed) {
-      step.completed = true;
-      e.state.activeMission.chosenPath = path;
-      e.state.activeMission.currentStepIndex++;
+    if (step && applyStepComplete(e.state.activeMission, stepId, path)) {
       soundEngine.playMissionComplete();
       e.addXP(MISSION.objectiveXP, `Objective Complete: ${step.title} (${path.toUpperCase()})`);
       e.setNotification(`Objective Complete via ${path.toUpperCase()} approach!`);
@@ -150,11 +147,9 @@ export class MissionRunner {
 
   completeStoryMission() {
     const e = this.e;
-    e.state.activeMission.completed = true;
+    const xp = applyMissionComplete(e.state.activeMission, e.state.stats);
     soundEngine.playMissionComplete();
-    e.addXP(e.state.activeMission.rewardXP, 'Story Mission Victory: The Midnight Prototype');
-    e.state.stats.credits += e.state.activeMission.rewardCredits;
-    e.state.stats.missionsCompleted.push(e.state.activeMission.id);
+    e.addXP(xp, 'Story Mission Victory: The Midnight Prototype');
 
     e.state.radioMessage = {
       sender: 'Agent Kira (HQ)',

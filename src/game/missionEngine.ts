@@ -1,4 +1,4 @@
-import { Mission, PlayerStats } from '../types/game';
+import { Mission, MissionPathChoice, PlayerStats } from '../types/game';
 
 export const STORY_MISSION_MIDNIGHT_PROTOTYPE: Mission = {
   id: 'mission_midnight_prototype',
@@ -138,4 +138,41 @@ export function calculateRank(xp: number): PlayerStats['rank'] {
   if (xp >= 500) return 'Investigator';
   if (xp >= 200) return 'Explorer';
   return 'Rookie';
+}
+
+/** Deep copy so tests / debug jumps don't mutate the module-level story template. */
+export function cloneMission(mission: Mission): Mission {
+  return {
+    ...mission,
+    steps: mission.steps.map((s) => ({
+      ...s,
+      approachHint: { ...s.approachHint },
+      targetPosition: [...s.targetPosition] as [number, number, number],
+    })),
+  };
+}
+
+/**
+ * Mark one objective done and walk the cursor forward. Returns false if that step
+ * is missing or already completed (MissionRunner.checkStep is a no-op in that case).
+ */
+export function applyStepComplete(mission: Mission, stepId: string, path: MissionPathChoice): boolean {
+  const step = mission.steps.find((s) => s.id === stepId);
+  if (!step || step.completed) return false;
+  step.completed = true;
+  mission.chosenPath = path;
+  mission.currentStepIndex++;
+  return true;
+}
+
+/**
+ * Story finale bookkeeping (credits + completed-id). XP / rank stay with `addXP`
+ * so the engine can still play the promotion sting. Returns the XP the caller
+ * should award, matching `MissionRunner.completeStoryMission`.
+ */
+export function applyMissionComplete(mission: Mission, stats: PlayerStats): number {
+  mission.completed = true;
+  stats.credits += mission.rewardCredits;
+  stats.missionsCompleted.push(mission.id);
+  return mission.rewardXP;
 }

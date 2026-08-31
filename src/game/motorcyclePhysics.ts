@@ -4,16 +4,14 @@ import { soundEngine } from './audio';
 import { BIKE } from './tunables';
 import { resolveCircleAabbs } from './collision';
 import { gatherInteriorBoxes } from './world';
+import { stepMotorcycleArcade } from './motorcycleArcade';
 
 /**
  * V9 motorcycle arcade physics (spec §5).
  *
- * Owns throttle/brake, nitro + fuel burn, speed-scaled steering, lean, drift, ramp
- * launches, airborne gravity and the drift-spark particles. Reads `engine.input` and
- * mutates the engine's `bike*` transform fields plus the shared `GameState`.
- *
- * Bodies were moved verbatim from GameEngine; the only edits are `this.` -> `this.e.`
- * and inline magic numbers swapped for named `BIKE.*` tunables of identical value.
+ * Numeric throttle / fuel / nitro / steering live in `motorcycleArcade.ts` so they can
+ * be unit-tested. This class copies engine fields through that step, then owns ramps,
+ * interior collision, mesh pose and the drift-spark particles.
  */
 export class MotorcyclePhysics {
   constructor(private e: GameEngine) {}
@@ -21,37 +19,51 @@ export class MotorcyclePhysics {
   update(dt: number) {
     const e = this.e;
     const isControlActive = e.state.isRiding || e.state.isRemoteV9Active;
-    const isOutOfFuel = e.state.fuelLevel <= 0;
+    const prevNitro = e.state.nitroLevel;
 
-    // Acceleration & Speed limits based on fuel and boost
-    const accel = isOutOfFuel ? BIKE.accelOutOfFuel : e.state.isBoosting ? BIKE.accelBoost : BIKE.accelNormal;
-    const maxSpeed = isOutOfFuel ? BIKE.maxSpeedOutOfFuel : e.state.isBoosting ? BIKE.maxSpeedBoost : BIKE.maxSpeedNormal;
-    const reverseMax = isOutOfFuel ? BIKE.reverseMaxOutOfFuel : BIKE.reverseMaxNormal;
+    const sim = {
+      bikeSpeed: e.bikeSpeed,
+      bikeRot: e.bikeRot,
+      bikeLean: e.bikeLean,
+      bikeX: e.bikePos.x,
+      bikeY: e.bikePos.y,
+      bikeZ: e.bikePos.z,
+      bikeVerticalVel: e.bikeVerticalVel,
+      isBikeGrounded: e.isBikeGrounded,
+      isDrifting: e.isDrifting,
+      fuelLevel: e.state.fuelLevel,
+      nitroLevel: e.state.nitroLevel,
+      steerAngleDeg: e.state.steerAngleDeg,
+    };
 
-    // Nitro consumption/recharge (only if has fuel)
-    if (e.input.boost && isControlActive && e.state.nitroLevel > 0 && !isOutOfFuel) {
-      e.state.nitroLevel = Math.max(0, e.state.nitroLevel - dt * BIKE.nitroDrainPerSec);
-      if (Math.random() < 0.3) soundEngine.playNitro();
-    } else {
-      e.state.nitroLevel = Math.min(100, e.state.nitroLevel + dt * BIKE.nitroRegenPerSec);
+    stepMotorcycleArcade(sim, {
+      isControlActive,
+      isBoosting: e.state.isBoosting,
+      isRefueling: e.state.isRefueling,
+      isSilentMode: e.state.isSilentMode,
+      steeringAssist: e.settings.steeringAssist,
+      input: e.input,
+    }, dt);
+
+    e.bikeSpeed = sim.bikeSpeed;
+    e.bikeRot = sim.bikeRot;
+    e.bikeLean = sim.bikeLean;
+    e.bikePos.x = sim.bikeX;
+    e.bikePos.y = sim.bikeY;
+    e.bikePos.z = sim.bikeZ;
+    e.bikeVerticalVel = sim.bikeVerticalVel;
+    e.isBikeGrounded = sim.isBikeGrounded;
+    e.isDrifting = sim.isDrifting;
+    e.state.isDrifting = sim.isDrifting;
+    e.state.fuelLevel = sim.fuelLevel;
+    e.state.nitroLevel = sim.nitroLevel;
+    e.state.steerAngleDeg = sim.steerAngleDeg;
+
+    if (sim.nitroLevel < prevNitro && Math.random() < 0.3) {
+      soundEngine.playNitro();
     }
 
-    // Fuel Consumption Calculation
     if (isControlActive && Math.abs(e.bikeSpeed) > 0.4 && !e.state.isRefueling) {
-      let fuelBurnRate = BIKE.fuelBurnBase + (Math.abs(e.bikeSpeed) / BIKE.maxSpeedNormal) * BIKE.fuelBurnSpeedScale;
-      if (e.state.isBoosting) {
-        fuelBurnRate += BIKE.fuelBurnBoostBonus;
-      }
-      if (e.state.isSilentMode) {
-        fuelBurnRate *= BIKE.fuelBurnSilentMult; // Silent electric eco mode
-      }
-      if (e.isDrifting) {
-        fuelBurnRate += BIKE.fuelBurnDriftBonus;
-      }
-
-      e.state.fuelLevel = Math.max(0, e.state.fuelLevel - fuelBurnRate * dt);
-
-      // Low fuel warning beep & Kira audio
       if (e.state.fuelLevel <= 20 && e.state.fuelLevel > 0) {
         const now = Date.now();
         if (now - e.lastLowFuelAlertTime > BIKE.lowFuelAlertCooldownMs) {
@@ -69,85 +81,13 @@ export class MotorcyclePhysics {
       }
     }
 
-    // Acceleration & Braking (Supports Keyboard & Virtual Joystick Analog Input)
-    if (isControlActive) {
-      const throttleInput = e.input.analogThrottle !== 0
-        ? e.input.analogThrottle
-        : e.input.forward ? 1 : e.input.backward ? -1 : 0;
-
-      if (throttleInput > 0) {
-        e.bikeSpeed = Math.min(maxSpeed, e.bikeSpeed + accel * throttleInput * dt);
-      } else if (throttleInput < 0) {
-        if (e.bikeSpeed > 0) {
-          e.bikeSpeed = Math.max(0, e.bikeSpeed - BIKE.brakeDecel * Math.abs(throttleInput) * dt); // Brake
-        } else {
-          e.bikeSpeed = Math.max(reverseMax, e.bikeSpeed - BIKE.reverseAccel * Math.abs(throttleInput) * dt); // Reverse
-        }
-      } else {
-        // Natural friction drag
-        e.bikeSpeed *= Math.pow(BIKE.frictionPerFrame, dt * 60);
+    if (e.isDrifting) {
+      if (Math.random() < 0.25) {
+        soundEngine.playDrift();
+        this.spawnDriftParticle();
       }
-
-      // Drift / Powerslide Mechanic
-      const isDriftAction = e.input.drift || (e.input.jump && (e.input.left || e.input.right || Math.abs(e.input.analogSteer) > 0.2));
-      e.isDrifting = isDriftAction && Math.abs(e.bikeSpeed) > BIKE.driftMinSpeed;
-      e.state.isDrifting = e.isDrifting;
-
-      if (e.isDrifting) {
-        if (Math.random() < 0.25) {
-          soundEngine.playDrift();
-          this.spawnDriftParticle();
-        }
-        e.addStuntScore(Math.round(dt * BIKE.driftScorePerSec), 'CYBER DRIFT');
-      }
-
-      // Steering (Keyboard + Analog Joystick)
-      let steerVal = 0;
-      if (e.input.analogSteer !== 0) {
-        steerVal = -e.input.analogSteer;
-      } else if (e.input.left) {
-        steerVal = 1;
-      } else if (e.input.right) {
-        steerVal = -1;
-      }
-
-      let steerSpeed = (BIKE.steerBase * (1 + e.settings.steeringAssist * BIKE.steerAssistFactor)) * Math.sign(e.bikeSpeed || 1);
-      if (e.isDrifting) {
-        steerSpeed *= BIKE.steerDriftMult;
-      }
-
-      if (steerVal !== 0) {
-        const speedFactor = Math.min(1, Math.abs(e.bikeSpeed) / 5);
-        e.bikeRot += steerSpeed * steerVal * dt * speedFactor;
-        const targetLean = e.isDrifting ? steerVal * BIKE.leanDrift : steerVal * BIKE.leanNormal;
-        e.bikeLean = THREE.MathUtils.lerp(e.bikeLean, targetLean, dt * (e.isDrifting ? BIKE.leanLerpDrift : BIKE.leanLerpNormal));
-      } else {
-        e.bikeLean = THREE.MathUtils.lerp(e.bikeLean, 0, dt * BIKE.leanReturnLerp);
-      }
-    } else {
-      e.bikeSpeed *= BIKE.idleDecayControlled;
-      e.isDrifting = false;
-      e.state.isDrifting = false;
+      e.addStuntScore(Math.round(dt * BIKE.driftScorePerSec), 'CYBER DRIFT');
     }
-
-    e.state.steerAngleDeg = Math.round(e.bikeLean * BIKE.steerAngleDegScale);
-
-    // Gravity & Super Jump
-    if (!e.isBikeGrounded) {
-      e.bikeVerticalVel -= BIKE.gravity * dt;
-      e.bikePos.y += e.bikeVerticalVel * dt;
-      if (e.bikePos.y <= 0) {
-        e.bikePos.y = 0;
-        e.bikeVerticalVel = 0;
-        e.isBikeGrounded = true;
-      }
-    }
-
-    // Position displacement
-    const forwardX = -Math.sin(e.bikeRot) * e.bikeSpeed * dt;
-    const forwardZ = -Math.cos(e.bikeRot) * e.bikeSpeed * dt;
-    e.bikePos.x += forwardX;
-    e.bikePos.z += forwardZ;
 
     resolveCircleAabbs(e.bikePos, 1.15, gatherInteriorBoxes(e.world));
 
