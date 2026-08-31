@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { DisguiseType, GadgetType } from '../types/game';
 import type { GameEngine } from './gameEngine';
-import { raiseStationGate, type WorldObjects } from './world';
+import { gatherCollisionBoxes, raiseStationGate, type WorldObjects } from './world';
 import { soundEngine } from './audio';
 import { DRONE, STEALTH } from './tunables';
 import { canLaunchDrone } from './dronePower';
+import { pickSafeDismount } from './collision';
 
 /**
  * One-shot player actions triggered by input (keyboard, touch buttons, gamepad-to-come):
@@ -15,6 +16,8 @@ import { canLaunchDrone } from './dronePower';
  * public delegators so App / TouchControls / EngineInput / debug callers are unchanged.
  */
 export class PlayerActions {
+  private readonly dismountPos = new THREE.Vector3();
+
   constructor(private e: GameEngine) {}
 
   honkHorn() {
@@ -88,9 +91,16 @@ export class PlayerActions {
       e.notifyState();
       return;
     } else if (e.state.isRiding && Math.abs(e.bikeSpeed) < 8) {
-      // Dismount
+      // Dismount beside the bike on the first side that isn't inside a wall.
       e.state.isRiding = false;
-      e.playerPos.copy(e.bikePos).add(new THREE.Vector3(-1.4, 0, 0));
+      pickSafeDismount(
+        e.bikePos.x,
+        e.bikePos.z,
+        e.bikeRot,
+        gatherCollisionBoxes(e.world, e.stealthAI.foamBoxes()),
+        this.dismountPos,
+      );
+      e.playerPos.set(this.dismountPos.x, 0, this.dismountPos.z);
       e.playerRot = e.bikeRot;
       e.agentChar.group.position.copy(e.playerPos);
       e.agentChar.group.visible = true;

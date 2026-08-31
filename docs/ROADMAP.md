@@ -1,15 +1,15 @@
 # Roadmap — what's done, what's left
 
-Audited against [`SPEC.md`](SPEC.md) on 2026-08-31, from the actual code, with the game
-booted in a headless browser to confirm it runs clean (zero runtime errors).
+Last refreshed **2026-08-31** against `main` (`dac1c63` + this camera/dismount pass).
+The 70% audit below that date is historical; **do not treat the stub list as current.**
 
 ## Verdict
 
-The vertical slice described in spec §3 is **roughly 70% real**. The world, the bike, the
-gadgets, the disguises, the stealth detection and the story mission all genuinely work.
-What's missing splits into three buckets: **systems that are stubs pretending to be
-finished**, **the entire Android delivery path**, and **structural debt** that will make
-the next six months slower if it isn't paid down early.
+The spec §3 vertical slice is **playable end to end in software**: city, bike, gadgets,
+disguises, stealth, CHAOS 0–5, downtown race, story chase, museum + cargo interiors,
+Capacitor Android wrapper, quality presets, signed AAB. What is still open is
+**on-device proof** (tablet 30 FPS, APK sideload, story E2E on hardware) and
+**GPU draw-call work** if LOW misses 30 FPS downtown.
 
 ---
 
@@ -17,159 +17,97 @@ the next six months slower if it isn't paid down early.
 
 | Spec | System | Notes |
 | --- | --- | --- |
-| §3, §9 | Open city district | Roads, junctions, districts, colliders, landmarks, POIs |
-| §4 | Third-person agent | Walk/run, gravity, ground check, interaction raycast, crouch |
-| §5 | V9 motorcycle | Custom arcade physics — throttle, brake, speed-scaled steering, lean, drift, nitro, ramp jumps, airborne handling, crash reset |
-| §6 | Touch controls | Virtual joystick **and** D-pad, switchable; throttle/brake/boost/drift/jump/fire/dismount/horn |
-| §7 | Enter/exit vehicle | Mount/dismount with camera and controller handover |
-| §8 | Camera system | Four modes — chase, action, FPV, tactical — with speed-sensitive framing |
-| §10 | Mission framework | Data-driven steps with per-step Speed/Stealth/Smarts hints |
-| §11 | Stealth detection | Vision cones, distance, silent mode, rising alert meter, escort-out on capture |
-| §12 | Security cameras | Sweeping cones, EMP-disable, hackable terminals |
-| §13 | Disguises | Five disguises, lockers, disguise-aware bot behaviour |
-| §14 | Gadget set | EMP Tagger, Foam Launcher, Mini Recon Drone, Hologram Decoy, Remote V9 |
-| §15 | Recon drone | Launch, fly, camera view, return |
-| §16 | Child-safe action | Robots and drones only; capture = escorted out, never harm |
-| §20 | Traffic & pedestrians | Route-following vehicles, wandering NPCs, dialogue, side quests |
-| §23 | HUD/UX | Mission panel, speedometer, fuel/nitro, radar minimap, GPS routing, gadget bar |
-| §24 | Child accessibility | Steering assist, waypoint guidance, in-game walkthrough, forgiving failure |
-| §31 | Privacy-first | Zero network calls, zero data collection, no ads, fully offline |
-| §32 | Audio | Fully procedural Web Audio engine — engine RPM, gadgets, music, speech |
-| — | Extras beyond spec | Bike customiser, fuel stations, XP/ranks/credits, collectibles, stunt rings, parental play-timer |
+| §3, §9 | Open city district | Roads, junctions, colliders, landmarks, POIs |
+| §3 | Interiors | Hollow museum (cameras, staff door, laser) + cargo station (gate, vent, rail slot, EMP breaker) |
+| §4 | Third-person agent | Walk/run, gravity, crouch, camera-relative move |
+| §5 | V9 motorcycle | Arcade physics, nitro, drift, ramps, **forgiving crash** (speed cut + gyro, no fail) |
+| §6 | Touch controls | Joystick **and** D-pad |
+| §6, §38.6 | Gamepad | Xbox map; touch HUD hides while a pad is connected |
+| §7 | Enter/exit vehicle | Mount/dismount; **dismount searches left/right/behind so the agent does not spawn inside a wall** |
+| §8 | Camera | Chase / action / FPV / tactical; look-around while still; **chase arm occludes against building AABBs** |
+| §10 | Mission framework | Speed / Stealth / Smarts per step |
+| §11 | Stealth + AI | Five-state GuardAI, sound bus, escort-out |
+| §12 | Security cameras | Sweep + detect timer + alarm; EMP disable |
+| §13 | Disguises | Five disguises, lockers, `allowedDisguises[]` on zones |
+| §14 | Gadgets | EMP, foam (traps + solid blobs), hologram (10s), remote V9, recon drone |
+| §15 | Recon drone | Fly, camera, **battery, ~55 m leash, auto-return, recharge on rack** |
+| §16 | Child-safe action | Robots/drones only; capture = escort |
+| §17 | CHAOS | Levels 0–5, search drone / interceptors / roadblocks / elite, decay routes |
+| §18 | Chase | Reusable controller; story step 3 rides it |
+| §19 | Racing | Downtown checkpoint sprint, timer, best time in save |
+| §20 | Traffic & peds | Quality-scaled pool (LOW 2 / MED 4 / HIGH 8) |
+| §21 | Save | Versioned `SaveManager` + migrate; full mission/pos/disguise/CHAOS |
+| §23 | HUD | Mission, speedo, fuel/nitro, radar, GPS, gadget bar |
+| §24 | Accessibility | Steering assist, waypoints, walkthrough, forgiving failure |
+| §26 | Quality | LOW / MED / HIGH + auto-detect; **tablets never auto HIGH**; drawing-buffer budget |
+| §27–§30 | Android wrapper | Capacitor `com.velocitynine.agentv9`, landscape, no INTERNET, icons/splash |
+| §31 | Privacy | Zero network, no ads, offline |
+| §32 | Audio | Procedural Web Audio; tap-to-start unlock |
+| §33 | Debug menu | DEV-only; backtick. Production FPS chip: Parental → Show FPS overlay |
+| — | Extras | Bike customiser, fuel, XP/ranks, collectibles, stunt rings, parental timer, Jax drone-tagger |
 
 ---
 
-## ⚠️ Stubs — present in name, not in behaviour
+## ⚠️ Still open (not stubs — unfinished proof or polish)
 
-These are the ones that matter most, because the UI already implies they work.
+### B4 — on-device 30 FPS *(needs the physical tablet)*
+Software landed: pixel-ratio cap, no MSAA on large panels, street SpotLights off on LOW,
+hot-path Vector3/Box3 reuse, Parental FPS overlay, `window.__agentV9` probe.
 
-### 1. CHAOS Alert (spec §17) — *severity: high*
-`chaosAlertLevel` only ever takes the values **0 and 2**. Levels 1, 3, 4 and 5 are
-declared in the spec and shown in the HUD but nothing produces them, and none of the
-escalation content exists: no search drone, no interceptor drones, no roadblocks or
-trackers, no elite pursuit robot. There is also no decay path — no "escape the pursuit
-radius", no "change disguise to cool down", no safe areas.
-**Needs:** a real `ChaosAlertManager` owning level, progress, escalation triggers, decay
-rules, and the spawn/despawn of pursuit entities per level.
+Headless profile (discard FPS): **~1190 draw calls**, ~43k triangles downtown on LOW.
+The game is **draw-call bound**. **Done when** the overlay holds min FPS ≥ 30 riding
+downtown on the 1600×2560 tablet.
 
-### 2. Racing (spec §19) — *severity: high*
-`side_race_downtown` exists as **mission text only**. There is no checkpoint entity, no
-ordering, no wrong-checkpoint detection, no timer, no lap tracking, no results screen.
-**Needs:** `RaceManager`, `RaceCheckpoint`, `RaceParticipant` equivalents, plus the actual
-checkpoint meshes placed in the world.
+### D1 — instancing / merge static city *(spec §25)*
+Do this **only if** B4 on the tablet still misses 30. Shared geometry already exists;
+each Mesh is still a draw.
 
-### 3. Motorcycle chase (spec §18) — *severity: medium*
-Step 3 of the story mission is a proximity check against a drone flying a fixed sine path.
-There is no adaptive target speed, no dynamic checkpoints, no shortcuts, no obstacle
-spawning, no fail threshold with recovery.
-**Needs:** a reusable chase controller driven by a path plus a distance band.
+### D2 — code splitting
+Initial `gameEngine` chunk ~729 KB (~196 KB gzip). Target < 500 KB raw.
 
-### 4. AI state machine (spec §11) — *severity: medium*
-Bots have a single float `alertLevel`, not the five named states the spec asks for
-(Unaware / Curious / Investigating / Alert / Searching). There is no investigate
-behaviour, no search behaviour, no sound-event perception, and no navmesh — patrols are
-straight-line lerps between fixed points.
-**Needs:** an explicit state machine, a sound-event bus, and simple navigation (a waypoint
-graph is enough; a full navmesh is overkill here).
-
-### 5. Save system (spec §21) — *severity: high*
-Only **stats, settings and bike customisation** persist. Player position, current mission,
-mission step, disguise, gadget unlocks, collectibles picked up and CHAOS state are all
-**lost on reload**. There is no `SaveDataVersion` and no migration path — spec §21
-explicitly requires both.
-**Needs:** one versioned save object, one `SaveManager` with `migrate(v)`, and a
-checkpoint/autosave hook.
-
-### 6. Quality settings (spec §26) — *severity: medium*
-One boolean `highQualityGraphics`. The spec wants LOW / MEDIUM / HIGH presets governing
-shadows, resolution scale, traffic and pedestrian counts, LOD distances and particle
-budgets, with auto-detection on first launch. Auto-detect matters a lot on Android.
-
-### 7. Building interiors (spec §3) — *severity: medium*
-The museum and station are solid boxes with gates. The spec's vertical slice calls for one
-enterable interior and one stealth infiltration area inside it.
-
-### 8. Debug menu (spec §33) — *severity: low*
-Does not exist. Teleport, reset bike, refill gadgets, clear alert, unlock disguise, jump to
-mission stage, FPS/memory readout — all of it would make every later task faster to test.
+### First Android install
+Debug APK **builds**. Sideload + story E2E + Bluetooth pad on the tablet have not been
+ticked from this repo's hardware.
 
 ---
 
-## ❌ Not started
+## Historical audit (2026-08-31 morning) — superseded
 
-| Spec | Gap |
-| --- | --- |
-| §27–§30 | **The entire Android path.** No Capacitor/wrapper, no `AndroidManifest`, no package id, no icons, no adaptive icon, no splash, no landscape lock, no signing config, no APK, no AAB. Nothing has ever run on a phone. |
-| §6, §38.6 | **Gamepad support.** No Gamepad API polling at all. `EngineInputState` is ready for it; nothing feeds it. |
-| §25 | **Mobile performance work.** No object pooling, no LOD groups, no instancing, no draw-distance culling, no frustum/occlusion strategy. Single 979 KB bundle, no code splitting. Never profiled on a phone. |
-| §13 | **Data-driven restricted zones.** `AllowedDisguises[]` doesn't exist — disguise checks are hardcoded string comparisons inside the bot update. |
-| §22 | **Service separation.** All managers live inside one `GameEngine` class rather than as separate services. |
-| §35 | **Tests.** One smoke test now exists (`npm run smoke`). No unit tests on physics, missions or save migration. |
+The original stub list (CHAOS stuck at 0/2, race as text, no save, no Android, no interiors)
+was true at that audit and is **no longer true**. Kept here so old handoff paste does not
+get re-litigated: those items shipped the same day as C1–C5, B1–B3, D3 (partial), D4.
 
-## 🐞 Known bugs
+Suggested build order from that audit (A → B → C → D) completed through C and D3/D4.
+Remaining order:
 
-- **HUD overlap:** the agent rank / XP panel renders underneath the CHASE CAM and RESET
-  buttons at the top-left, clipping "AGENT V-09". Visible immediately on load at 1280×720.
-- **Deprecated Three.js APIs:** `THREE.Clock` (use `THREE.Timer`) and `PCFSoftShadowMap`
-  both log deprecation warnings on boot.
-- **AudioContext autoplay:** audio only starts after the first user gesture; on some
-  Android browsers the first sounds are silently swallowed. Needs an explicit
-  "tap to start" gate.
-
----
-
-## Suggested build order
-
-Ordered so that each phase makes the next one easier to verify.
-
-**Phase A — foundations (do first, unblocks everything)**
-1. Versioned `SaveManager` with full state capture + migration.
-2. Debug menu (dev builds only).
-3. Split `gameEngine.ts` into subsystems; extract tunables to a config module.
-4. Fix the three known bugs.
-
-**Phase B — get it on the phone (the milestone that actually matters)**
-5. Capacitor wrapper, package id `com.velocitynine.agentv9`, landscape lock, icons, splash.
-6. Gamepad API support.
-7. Quality presets LOW/MED/HIGH with device auto-detect.
-8. First real device test; profile and fix the worst frame-time offenders.
-9. Signed debug APK on the target phone.
-
-**Phase C — finish the stubbed systems**
-10. `ChaosAlertManager` with all six levels and decay.
-11. Race framework + the downtown checkpoint sprint made real.
-12. Chase controller; rebuild story step 3 on top of it.
-13. AI state machine with investigate/search and sound events.
-14. Museum interior + stealth infiltration area.
-
-**Phase D — polish and ship**
-15. Object pooling, LOD, instancing, draw-distance culling.
-16. Code splitting; get the initial chunk under 500 KB.
-17. Unit tests on physics, mission advancement and save migration.
-18. Signed AAB.
+1. Sideload debug APK on the tablet; Parental → Show FPS overlay; ride downtown.
+2. If min FPS < 30 → D1 merge/instance static city.
+3. Play The Midnight Prototype Speed / Stealth / Smarts on device.
+4. D2 split only if store size / parse time hurts.
 
 ## Definition of done for the first Android build
 
-Spec §38, restated as a checklist to tick off:
+Spec §38:
 
-- [ ] Launches on a physical Android phone
+- [ ] Launches on a physical Android device
 - [ ] Walk around the city district
 - [ ] Mount V9
 - [ ] Bike feels fun to ride on a touchscreen
 - [ ] Touch controls work
 - [ ] Bluetooth controller works
-- [ ] Enter one building interior
-- [ ] Security camera detects the player
-- [ ] One disguise works
-- [ ] EMP disables electronics
-- [ ] Recon drone works
-- [ ] A real race works
-- [ ] A real chase works
-- [ ] The Midnight Prototype can be completed end to end
-- [ ] At least two of Speed / Stealth / Smarts genuinely work
-- [x] Progress saves and reloads <!-- A1: versioned SaveManager + migration -->
-- [ ] Runs acceptably on a mid-range phone
+- [x] Enter one building interior <!-- museum + cargo station, software -->
+- [x] Security camera detects the player <!-- GuardAI cameras -->
+- [x] One disguise works
+- [x] EMP disables electronics
+- [x] Recon drone works <!-- + battery/leash -->
+- [x] A real race works <!-- downtown sprint -->
+- [x] A real chase works <!-- chase controller -->
+- [ ] The Midnight Prototype can be completed end to end *on device*
+- [x] At least two of Speed / Stealth / Smarts genuinely work
+- [x] Progress saves and reloads
+- [ ] Runs acceptably on the target tablet (B4 overlay ≥ 30 FPS)
 - [ ] APK installs
-- [x] Signed AAB can be produced <!-- D4: `npm run android:aab`; keystore is local, not committed -->
-- [x] Tablet-class panels auto-pick LOW and never open an 8M-pixel buffer <!-- B4 2026-08-31 -->
-
+- [x] Signed AAB can be produced
+- [x] Tablet-class panels auto-pick LOW and never open an 8M-pixel buffer
+- [x] Chase camera does not clip through building volumes
+- [x] Dismount never drops the agent inside a collider

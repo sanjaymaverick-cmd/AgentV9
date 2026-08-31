@@ -239,6 +239,10 @@ export const CAMERA = {
   fovSpeedBonusMax: 10,
 
   fpvVibMinSpeed: 15,
+
+  /** Chase/action/tactical: pull the camera in front of a wall it would otherwise sit inside. */
+  occludePadding: 0.45,
+  occludeMinDist: 1.2,
 } as const;
 
 /** Story mission proximity gates & rewards — see MissionRunner. */

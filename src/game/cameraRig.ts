@@ -3,6 +3,8 @@ import type { GameEngine } from './gameEngine';
 import { CameraMode } from '../types/game';
 import { soundEngine } from './audio';
 import { CAMERA } from './tunables';
+import { occludeSegment } from './collision';
+import { gatherCollisionBoxes } from './world';
 
 /**
  * Camera system (spec §8) — four modes (chase / action / FPV / tactical) with
@@ -14,6 +16,7 @@ import { CAMERA } from './tunables';
  */
 export class CameraRig {
   private readonly targetPos = new THREE.Vector3();
+  private readonly lookAt = new THREE.Vector3();
 
   constructor(private e: GameEngine) {}
 
@@ -177,12 +180,21 @@ export class CameraRig {
       : CAMERA.posLerpDefault;
     e.camera.position.lerp(targetPos, Math.min(1, dt * lerpSpeed));
 
+    const lookY = target.y + lookHeight;
     if (mode === 'fpv') {
       const lookTargetX = target.x - Math.sin(effectiveRot) * 20;
       const lookTargetZ = target.z - Math.cos(effectiveRot) * 20;
-      e.camera.lookAt(lookTargetX, target.y + lookHeight, lookTargetZ);
+      e.camera.lookAt(lookTargetX, lookY, lookTargetZ);
     } else {
-      e.camera.lookAt(target.x, target.y + lookHeight, target.z);
+      this.lookAt.set(target.x, lookY, target.z);
+      occludeSegment(
+        this.lookAt,
+        e.camera.position,
+        gatherCollisionBoxes(e.world),
+        CAMERA.occludePadding,
+        CAMERA.occludeMinDist,
+      );
+      e.camera.lookAt(this.lookAt);
     }
 
     const baseFOV = mode === 'action' ? CAMERA.fovBaseAction : mode === 'fpv' ? CAMERA.fovBaseFPV : CAMERA.fovBaseChase;
