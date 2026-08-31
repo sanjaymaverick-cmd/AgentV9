@@ -64,6 +64,7 @@ export default function App() {
   const [sessionMinutes, setSessionMinutes] = useState(0);
   const [showTimeReminder, setShowTimeReminder] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [audioStarted, setAudioStarted] = useState(false);
 
   // Initialize Three.js Game Engine
   useEffect(() => {
@@ -80,8 +81,8 @@ export default function App() {
     engineRef.current = engine;
     setGameState(engine.state);
 
-    // Start background synth music loop
-    soundEngine.startMusic();
+    // Music starts from the "tap to start" gate (handleStartAudio) so mobile WebViews
+    // unlock the AudioContext on a real gesture instead of swallowing the first sounds.
 
     return () => {
       engine.destroy();
@@ -102,6 +103,13 @@ export default function App() {
     }, 60000);
     return () => clearInterval(interval);
   }, [settings.timeLimitMinutes]);
+
+  // "Tap to start" audio gate — unlock the AudioContext from a real user gesture.
+  const handleStartAudio = () => {
+    soundEngine.unlock();
+    soundEngine.startMusic();
+    setAudioStarted(true);
+  };
 
   // Handle Customizer Save
   const handleSaveCustomization = (newCustom: VehicleCustomization, newDisguise: DisguiseType) => {
@@ -159,6 +167,23 @@ export default function App() {
         className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
       />
 
+      {/* Tap-to-Start Audio Gate — unlocks the AudioContext on a real gesture */}
+      {!audioStarted && (
+        <button
+          onClick={handleStartAudio}
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-slate-950/95 backdrop-blur-sm cursor-pointer text-center p-6"
+        >
+          <span className="text-5xl sm:text-6xl animate-bounce">🏍️</span>
+          <span className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-cyan-300">
+            Agent V9: Velocity City
+          </span>
+          <span className="mt-2 px-6 py-3 rounded-2xl bg-cyan-500 text-slate-950 font-black text-lg uppercase tracking-wide shadow-lg shadow-cyan-500/30">
+            Tap to Start
+          </span>
+          <span className="text-xs text-slate-400 mt-1">Turns on engine sounds, music and mission voice</span>
+        </button>
+      )}
+
       {/* Primary HUD Overlay */}
       {gameState && engineRef.current && (
         <HUD
@@ -175,6 +200,7 @@ export default function App() {
           onSelectGadget={(g) => engineRef.current?.switchGadget(g)}
           onToggleSilent={() => engineRef.current?.toggleSilentOrCrouch()}
           onInteract={() => engineRef.current?.handleInteractAction()}
+          touchControlsActive={settings.touchControls}
         />
       )}
 

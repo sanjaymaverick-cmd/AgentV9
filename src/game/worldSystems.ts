@@ -40,7 +40,7 @@ export class WorldSystems {
       e.playerRot = THREE.MathUtils.lerp(e.playerRot, targetAngle, dt * 12);
 
       // Walking leg animation
-      const walkTime = e.clock.getElapsedTime() * (moveSpeed * 1.5);
+      const walkTime = e.timer.getElapsed() * (moveSpeed * 1.5);
       e.agentChar.leftLeg.rotation.x = Math.sin(walkTime) * 0.6;
       e.agentChar.rightLeg.rotation.x = -Math.sin(walkTime) * 0.6;
       e.agentChar.leftArm.rotation.x = -Math.sin(walkTime) * 0.5;
@@ -215,7 +215,7 @@ export class WorldSystems {
         // Animate quest marker floating
         if (npc.questIcon) {
           npc.questIcon.rotation.y += 2.5 * dt;
-          npc.questIcon.position.y = 2.4 + Math.sin(e.clock.getElapsedTime() * 4) * 0.15;
+          npc.questIcon.position.y = 2.4 + Math.sin(e.timer.getElapsed() * 4) * 0.15;
         }
 
         // Animate pedestrians walking along sidewalk routes
@@ -235,7 +235,7 @@ export class WorldSystems {
             npc.obj.rotation.y = Math.atan2(pDir.x, pDir.z);
 
             // Procedural walking limb animation
-            const walkCycle = e.clock.getElapsedTime() * 7;
+            const walkCycle = e.timer.getElapsed() * 7;
             npc.leftLeg.rotation.x = Math.sin(walkCycle) * 0.6;
             npc.rightLeg.rotation.x = -Math.sin(walkCycle) * 0.6;
             npc.leftArm.rotation.x = -Math.sin(walkCycle) * 0.4;
@@ -271,7 +271,7 @@ export class WorldSystems {
 
   updateFuelStationsAndRefueling(dt: number) {
     const e = this.e;
-    const time = e.clock.getElapsedTime();
+    const time = e.timer.getElapsed();
     const playerTarget = e.state.isRiding ? e.bikePos : e.playerPos;
 
     let nearestStation: { name: string; distance: number; position: [number, number, number] } | null = null;

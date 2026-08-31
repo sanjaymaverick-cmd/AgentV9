@@ -21,6 +21,18 @@ class SoundEngine {
     // Lazy initialized on first user interaction
   }
 
+  /**
+   * Create + resume the AudioContext from a real user gesture. Android WebViews (and
+   * Safari) silently swallow the first sounds unless the context is unlocked inside a
+   * genuine tap/click handler — call this from the "tap to start" gate.
+   */
+  public unlock() {
+    this.initCtx();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
   private initCtx() {
     if (!this.ctx) {
       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

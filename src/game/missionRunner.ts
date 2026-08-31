@@ -53,7 +53,7 @@ export class MissionRunner {
       e.waypointGroup.position.z = target.z;
       e.waypointGroup.position.y = 0;
 
-      const time = e.clock.getElapsedTime();
+      const time = e.timer.getElapsed();
       const diamond = e.waypointGroup.getObjectByName('waypoint_diamond');
       if (diamond) {
         diamond.rotation.y = time * 2.2;
@@ -116,8 +116,8 @@ export class MissionRunner {
     if (mission.currentStepIndex === 4) {
       e.bossDrone.group.visible = true;
       // Animate giant cargo drone flying slowly along highway
-      e.bossDrone.group.position.x = 40 + Math.sin(e.clock.getElapsedTime() * 0.4) * 20;
-      e.bossDrone.group.position.z = 40 + (e.clock.getElapsedTime() % 60) * 1.5;
+      e.bossDrone.group.position.x = 40 + Math.sin(e.timer.getElapsed() * 0.4) * 20;
+      e.bossDrone.group.position.z = 40 + (e.timer.getElapsed() % 60) * 1.5;
       e.bossDrone.rotors.forEach((r) => (r.rotation.y += 0.4));
     }
   }

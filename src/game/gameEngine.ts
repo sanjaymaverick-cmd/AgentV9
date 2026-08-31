@@ -117,7 +117,7 @@ export class GameEngine {
   public camera: THREE.PerspectiveCamera;
   public renderer: THREE.WebGLRenderer;
   private animFrameId: number | null = null;
-  public clock: THREE.Clock;
+  public timer: THREE.Timer;
 
   // City & World Objects
   // NOTE: several fields below are `public` only so the extracted subsystems
@@ -235,7 +235,7 @@ export class GameEngine {
     this.container = container;
     this.customization = customization;
     this.settings = settings;
-    this.clock = new THREE.Clock();
+    this.timer = new THREE.Timer();
 
     const initialStats: PlayerStats = savedGame?.stats
       ? { ...cloneDefaultStats(), ...savedGame.stats }
@@ -294,7 +294,7 @@ export class GameEngine {
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
 
     this.initWorld();
@@ -471,7 +471,8 @@ export class GameEngine {
   // ---------------------------------------------------
   private startLoop() {
     const loop = () => {
-      const dt = Math.min(this.clock.getDelta(), 0.1);
+      this.timer.update();
+      const dt = Math.min(this.timer.getDelta(), 0.1);
       this.update(dt);
       this.renderer.render(this.scene, this.camera);
       this.animFrameId = requestAnimationFrame(loop);

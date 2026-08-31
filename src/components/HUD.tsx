@@ -47,6 +47,9 @@ interface HUDProps {
   onSelectGadget: (g: GameState['currentGadget']) => void;
   onToggleSilent: () => void;
   onInteract: () => void;
+  /** When the on-screen touch controls are shown, their top bar (CAM / RESET) sits
+   *  in the top-left — nudge the profile column down so it doesn't clip "AGENT V-09". */
+  touchControlsActive?: boolean;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -63,6 +66,7 @@ export const HUD: React.FC<HUDProps> = ({
   onSelectGadget,
   onToggleSilent,
   onInteract,
+  touchControlsActive = false,
 }) => {
   const currentStep = state.activeMission.steps[state.activeMission.currentStepIndex];
   const targetPos = currentStep?.targetPosition;
@@ -73,7 +77,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ---------------- TOP BAR ---------------- */}
       <div className="flex items-start justify-between gap-3 w-full">
         {/* Left Column: Agent Profile & Rank + Mission Objectives / Radio */}
-        <div className="pointer-events-auto flex flex-col gap-2.5 max-w-xs sm:max-w-sm">
+        <div className={`pointer-events-auto flex flex-col gap-2.5 max-w-xs sm:max-w-sm ${touchControlsActive ? 'mt-11 sm:mt-12' : ''}`}>
           {/* Agent Profile & Rank */}
           <div className="flex items-center gap-3 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-2.5 px-3.5 shadow-xl shadow-cyan-950/40">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/30 border border-cyan-300/40 shrink-0">
@@ -217,7 +221,7 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
 
         {/* Right: Radar MiniMap & Navigation Shortcut Controls */}
-        <div className="pointer-events-auto flex items-start gap-3">
+        <div className={`pointer-events-auto flex items-start gap-3 ${touchControlsActive ? 'mt-11 sm:mt-12' : ''}`}>
           {/* Quick Action Buttons */}
           <div className="flex flex-col gap-1.5">
             <button
