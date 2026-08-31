@@ -163,6 +163,11 @@ export class CameraRig {
       vibX = (Math.random() - 0.5) * 0.04;
       vibY = (Math.random() - 0.5) * 0.04;
     }
+    if (e.crashShake > 0) {
+      const amp = e.crashShake * 1.4;
+      vibX += (Math.random() - 0.5) * amp;
+      vibY += (Math.random() - 0.5) * amp;
+    }
 
     const targetPos = this.targetPos.set(targetCamX + vibX, targetCamY + vibY, targetCamZ);
     const lerpSpeed = e.isPointerDragging

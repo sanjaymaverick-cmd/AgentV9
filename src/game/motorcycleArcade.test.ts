@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyCrashSlowdown,
+  detectHardLanding,
+  detectWallCrash,
   idleDriveInput,
   makeArcadeBike,
   stepMotorcycleArcade,
@@ -166,5 +169,23 @@ describe('stepMotorcycleArcade', () => {
     expect(bike.bikeY).toBe(0);
     expect(bike.bikeVerticalVel).toBe(0);
     expect(bike.isBikeGrounded).toBe(true);
+    expect(bike.landingImpact).toBeGreaterThan(0);
+  });
+});
+
+describe('crash detection', () => {
+  it('counts a fast wall hit with a real push-out', () => {
+    expect(detectWallCrash(20, 0.4)).toBe(true);
+    expect(detectWallCrash(5, 0.8)).toBe(false);
+    expect(detectWallCrash(20, 0.05)).toBe(false);
+  });
+
+  it('counts a heavy landing and ignores a tap', () => {
+    expect(detectHardLanding(22)).toBe(true);
+    expect(detectHardLanding(8)).toBe(false);
+  });
+
+  it('keeps a little speed so the crash is not a hard stop', () => {
+    expect(applyCrashSlowdown(20)).toBeCloseTo(20 * BIKE.crashSpeedKeep, 5);
   });
 });

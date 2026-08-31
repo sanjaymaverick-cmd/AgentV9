@@ -72,6 +72,15 @@ export const BIKE = {
 
   worldBound: 165, // ± clamp on x/z
   wheelRadius: 0.38, // for wheel-spin visual
+
+  // Forgiving crash (spec §5) — gyro rights the bike, no fail state
+  crashMinSpeed: 14, // m/s into a wall before it counts
+  crashMinPush: 0.28, // metres of collision push-out
+  crashLandingVel: 21, // downward impact; normal ramps stay under this
+  crashSpeedKeep: 0.2, // keep this fraction of speed
+  crashStunSec: 0.7,
+  crashShakeSec: 0.45,
+  crashCooldownSec: 1.2,
 } as const;
 
 /** Security bots, vision cones, CHAOS meter, escort-out — see StealthAI. */

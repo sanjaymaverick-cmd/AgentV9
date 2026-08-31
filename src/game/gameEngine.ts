@@ -191,6 +191,9 @@ export class GameEngine {
   public bikeVerticalVel = 0;
   public isBikeGrounded = true;
   public isDrifting = false;
+  public bikeCrashStun = 0;
+  public bikeCrashCooldown = 0;
+  public crashShake = 0;
 
   public dronePos = new THREE.Vector3(-60, 2, -48);
   public droneRot = 0;

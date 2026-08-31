@@ -4,7 +4,12 @@ import { soundEngine } from './audio';
 import { BIKE } from './tunables';
 import { resolveCircleAabbs } from './collision';
 import { gatherCollisionBoxes } from './world';
-import { stepMotorcycleArcade } from './motorcycleArcade';
+import {
+  applyCrashSlowdown,
+  detectHardLanding,
+  detectWallCrash,
+  stepMotorcycleArcade,
+} from './motorcycleArcade';
 
 /**
  * V9 motorcycle arcade physics (spec §5).
@@ -24,6 +29,11 @@ export class MotorcyclePhysics {
     const isControlActive = e.state.isRiding || e.state.isRemoteV9Active;
     const prevNitro = e.state.nitroLevel;
 
+    const stunned = e.bikeCrashStun > 0;
+    const input = stunned
+      ? { ...e.input, forward: false, backward: false, boost: false, analogThrottle: 0 }
+      : e.input;
+
     const sim = {
       bikeSpeed: e.bikeSpeed,
       bikeRot: e.bikeRot,
@@ -37,15 +47,16 @@ export class MotorcyclePhysics {
       fuelLevel: e.state.fuelLevel,
       nitroLevel: e.state.nitroLevel,
       steerAngleDeg: e.state.steerAngleDeg,
+      landingImpact: 0,
     };
 
     stepMotorcycleArcade(sim, {
       isControlActive,
-      isBoosting: e.state.isBoosting,
+      isBoosting: e.state.isBoosting && !stunned,
       isRefueling: e.state.isRefueling,
       isSilentMode: e.state.isSilentMode,
       steeringAssist: e.settings.steeringAssist,
-      input: e.input,
+      input,
     }, dt);
 
     e.bikeSpeed = sim.bikeSpeed;
@@ -92,7 +103,19 @@ export class MotorcyclePhysics {
       e.addStuntScore(Math.round(dt * BIKE.driftScorePerSec), 'CYBER DRIFT');
     }
 
+    const preX = e.bikePos.x;
+    const preZ = e.bikePos.z;
     resolveCircleAabbs(e.bikePos, 1.15, gatherCollisionBoxes(e.world, e.stealthAI.foamBoxes()));
+    const pushOut = Math.hypot(e.bikePos.x - preX, e.bikePos.z - preZ);
+
+    e.bikeCrashStun = Math.max(0, e.bikeCrashStun - dt);
+    e.bikeCrashCooldown = Math.max(0, e.bikeCrashCooldown - dt);
+    e.crashShake = Math.max(0, e.crashShake - dt);
+
+    if (isControlActive && e.bikeCrashCooldown <= 0) {
+      if (detectWallCrash(e.bikeSpeed, pushOut)) this.triggerCrash('wall');
+      else if (detectHardLanding(sim.landingImpact)) this.triggerCrash('landing');
+    }
 
     // Check Stunt Ramps Collision
     const bikeBox = this.bikeBox.setFromCenterAndSize(e.bikePos, this.bikeBoxSize);
@@ -121,6 +144,26 @@ export class MotorcyclePhysics {
 
     // Update drift particles
     this.updateDriftParticles(dt);
+  }
+
+  private triggerCrash(kind: 'wall' | 'landing') {
+    const e = this.e;
+    e.bikeSpeed = applyCrashSlowdown(e.bikeSpeed);
+    e.bikeLean *= -0.35;
+    e.bikeVerticalVel = 0;
+    e.bikeCrashStun = BIKE.crashStunSec;
+    e.bikeCrashCooldown = BIKE.crashCooldownSec;
+    e.crashShake = BIKE.crashShakeSec;
+    e.isDrifting = false;
+    e.state.isDrifting = false;
+    soundEngine.playReset();
+    if (kind === 'landing') {
+      e.setNotification('Hard landing — V9 gyro caught you!');
+      soundEngine.speak('Easy, agent. Gyro recovery complete.', 'v9');
+    } else {
+      e.setNotification('Crash! V9 self-righting. No harm done.');
+      soundEngine.speak('Impact absorbed. You are okay.', 'v9');
+    }
   }
 
   private spawnDriftParticle() {

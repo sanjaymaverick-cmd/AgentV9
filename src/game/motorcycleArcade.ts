@@ -19,6 +19,8 @@ export interface ArcadeBike {
   fuelLevel: number;
   nitroLevel: number;
   steerAngleDeg: number;
+  /** Downward speed at the moment of landing this tick, else 0. */
+  landingImpact: number;
 }
 
 export interface ArcadeDriveInput {
@@ -56,6 +58,7 @@ export function makeArcadeBike(overrides: Partial<ArcadeBike> = {}): ArcadeBike 
     fuelLevel: 100,
     nitroLevel: 100,
     steerAngleDeg: 0,
+    landingImpact: 0,
     ...overrides,
   };
 }
@@ -145,10 +148,12 @@ export function stepMotorcycleArcade(bike: ArcadeBike, ctx: ArcadeDriveContext, 
 
   bike.steerAngleDeg = Math.round(bike.bikeLean * BIKE.steerAngleDegScale);
 
+  bike.landingImpact = 0;
   if (!bike.isBikeGrounded) {
     bike.bikeVerticalVel -= BIKE.gravity * dt;
     bike.bikeY += bike.bikeVerticalVel * dt;
     if (bike.bikeY <= 0) {
+      bike.landingImpact = Math.max(0, -bike.bikeVerticalVel);
       bike.bikeY = 0;
       bike.bikeVerticalVel = 0;
       bike.isBikeGrounded = true;
@@ -160,6 +165,18 @@ export function stepMotorcycleArcade(bike: ArcadeBike, ctx: ArcadeDriveContext, 
 
   bike.bikeX = clamp(bike.bikeX, -BIKE.worldBound, BIKE.worldBound);
   bike.bikeZ = clamp(bike.bikeZ, -BIKE.worldBound, BIKE.worldBound);
+}
+
+export function detectWallCrash(speed: number, pushMeters: number): boolean {
+  return Math.abs(speed) >= BIKE.crashMinSpeed && pushMeters >= BIKE.crashMinPush;
+}
+
+export function detectHardLanding(impactDownSpeed: number): boolean {
+  return impactDownSpeed >= BIKE.crashLandingVel;
+}
+
+export function applyCrashSlowdown(speed: number): number {
+  return speed * BIKE.crashSpeedKeep;
 }
 
 export function idleDriveInput(): ArcadeDriveInput {

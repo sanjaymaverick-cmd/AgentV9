@@ -40,6 +40,9 @@ export class PlayerActions {
       e.bikeVerticalVel = 0;
       e.isBikeGrounded = true;
       e.bikePos.y = 0;
+      e.bikeCrashStun = 0;
+      e.bikeCrashCooldown = 0;
+      e.crashShake = 0;
       e.setNotification('Vehicle Righted & Stabilized!');
     } else {
       e.playerVel.set(0, 0, 0);
