@@ -676,59 +676,139 @@ export function createTechMuseum(): MuseumBuild {
   };
 }
 
-export function createCargoStation(): THREE.Group {
+export interface StationBuild {
+  group: THREE.Group;
+  interiorColliders: THREE.Box3[];
+  craneGate: THREE.Mesh;
+  craneGateBox: THREE.Box3;
+  interior: { minX: number; maxX: number; minZ: number; maxZ: number };
+}
+
+/**
+ * Enterable cargo warehouse (spec §18 step 4). Hollow hall:
+ * south crane gate (Smarts), west walk-in vent (Stealth), monorail slot north (Speed).
+ */
+export function createCargoStation(): StationBuild {
   const group = new THREE.Group();
   group.name = 'Cargo_Station';
-  group.position.set(85, 0, 30);
+  const origin = new THREE.Vector3(85, 0, 30);
+  group.position.copy(origin);
 
+  const colliders: THREE.Box3[] = [];
   const facade = createFacadeTexture('industrial', 11);
-  const matX = facadeMaterial(facade, 5, 3);
-  const matZ = facadeMaterial(facade, 4, 3);
+  const wallMat = facadeMaterial(facade, 4, 2);
   const hazard = new THREE.MeshBasicMaterial({ color: '#eab308' });
   const steel = steelMat();
+  const crateMat = new THREE.MeshStandardMaterial({ color: '#78716c', metalness: 0.3, roughness: 0.6 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: '#1c1917', roughness: 0.88, metalness: 0.2 });
 
-  const hall = new THREE.Mesh(new THREE.BoxGeometry(40, 14, 45), [matX, matX, roofMaterial(), darkMat(), matZ, matZ]);
-  hall.position.y = 7;
-  hall.castShadow = true;
-  hall.receiveShadow = true;
-  group.add(hall);
+  const H = 13;
+  const T = 0.9;
+  const W = 40;
+  const D = 45;
 
-  const band = new THREE.Mesh(new THREE.BoxGeometry(40.3, 1.1, 45.3), hazard);
-  band.position.y = 4.2;
+  const addWall = (lx: number, ly: number, lz: number, w: number, h: number, d: number, mat: THREE.Material) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(lx, ly, lz);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    colliders.push(
+      new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(lx, ly, lz).add(origin), new THREE.Vector3(w, h, d)),
+    );
+    return mesh;
+  };
+
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(W - 1.2, 0.16, D - 1.2), floorMat);
+  floor.position.set(0, 0.08, 0);
+  floor.receiveShadow = true;
+  group.add(floor);
+  const ceiling = new THREE.Mesh(new THREE.BoxGeometry(W, 0.35, D), roofMaterial());
+  ceiling.position.set(0, H, 0);
+  group.add(ceiling);
+
+  // West wall with a walk-in stealth vent (4m × 3.2m) around z = -8
+  addWall(-W / 2, H / 2, -16.25, T, H, 12.5, wallMat);
+  addWall(-W / 2, H / 2, 8.25, T, H, 28.5, wallMat);
+  addWall(-W / 2, 8.1, -8, T, H - 3.2, 4, wallMat);
+
+  // East wall
+  addWall(W / 2, H / 2, 0, T, H, D, wallMat);
+
+  // North wall — rail slot at y≈8 so the monorail can enter
+  addWall(-11.5, H / 2, D / 2, 17, H, T, wallMat);
+  addWall(11.5, H / 2, D / 2, 17, H, T, wallMat);
+  addWall(0, 3, D / 2, 6, 6, T, wallMat);
+  addWall(0, 12, D / 2, 6, 2, T, wallMat);
+
+  // South wall — 10m loading door (crane gate fills it)
+  addWall(-15, H / 2, -D / 2, 10, H, T, wallMat);
+  addWall(15, H / 2, -D / 2, 10, H, T, wallMat);
+  addWall(0, 11.5, -D / 2, 10, 3, T, wallMat);
+
+  const craneGate = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 8, 0.7),
+    new THREE.MeshStandardMaterial({ color: '#ca8a04', metalness: 0.55, roughness: 0.4 }),
+  );
+  craneGate.position.set(0, 4, -D / 2);
+  craneGate.name = 'StationCraneGate';
+  group.add(craneGate);
+  const craneGateBox = new THREE.Box3().setFromCenterAndSize(
+    new THREE.Vector3(0, 4, -D / 2).add(origin),
+    new THREE.Vector3(10, 8, 1.2),
+  );
+
+  const band = new THREE.Mesh(new THREE.BoxGeometry(10.4, 0.28, 0.22), hazard);
+  band.position.set(0, 8.15, -D / 2 - 0.5);
   group.add(band);
 
-  // Vertical ribs
   for (let i = -3; i <= 3; i++) {
-    const rib = new THREE.Mesh(new THREE.BoxGeometry(0.35, 13.5, 0.35), steel);
-    rib.position.set(i * 5.4, 7, 22.6);
+    const rib = new THREE.Mesh(new THREE.BoxGeometry(0.35, H - 0.6, 0.35), steel);
+    rib.position.set(i * 5.4, H / 2, -D / 2 - 0.15);
     group.add(rib);
-  }
-
-  for (let i = -1; i <= 1; i++) {
-    const door = new THREE.Mesh(new THREE.BoxGeometry(6.5, 8, 0.2), new THREE.MeshBasicMaterial({ color: '#1e293b' }));
-    door.position.set(i * 10, 4.2, -22.6);
-    group.add(door);
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.25, 0.22), hazard);
-    bar.position.set(i * 10, 8.2, -22.62);
-    group.add(bar);
   }
 
   const sign = new THREE.Mesh(
     new THREE.PlaneGeometry(14, 2.2),
-    new THREE.MeshBasicMaterial({ map: createSignTexture('CARGO BAY', '#1c1917', '#fbbf24') })
+    new THREE.MeshBasicMaterial({ map: createSignTexture('CARGO BAY', '#1c1917', '#fbbf24') }),
   );
-  sign.position.set(0, 11.6, -22.7);
+  sign.position.set(0, 11.6, -D / 2 - 0.55);
   sign.rotation.y = Math.PI;
   group.add(sign);
 
-  // Roof sawtooth sheds
   for (let i = -1; i <= 1; i++) {
     const shed = new THREE.Mesh(new THREE.BoxGeometry(10, 2.2, 8), steel);
-    shed.position.set(i * 12, 15.2, 4);
+    shed.position.set(i * 12, H + 1.3, 4);
     group.add(shed);
   }
 
-  return group;
+  // Interior crates (cover, not blocking the centre aisle)
+  (
+    [
+      [-14, 8],
+      [-14, 16],
+      [14, 6],
+      [14, 18],
+      [-12, -4],
+    ] as [number, number][]
+  ).forEach(([x, z]) => {
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.8, 2.4), crateMat);
+    crate.position.set(x, 0.9, z);
+    crate.castShadow = true;
+    group.add(crate);
+  });
+
+  const catwalk = new THREE.Mesh(new THREE.BoxGeometry(4, 0.18, 16), steel);
+  catwalk.position.set(0, 8.4, 0);
+  group.add(catwalk);
+
+  return {
+    group,
+    interiorColliders: colliders,
+    craneGate,
+    craneGateBox,
+    interior: { minX: 66, maxX: 104, minZ: 9, maxZ: 51 },
+  };
 }
 
 export function addNightSky(scene: THREE.Scene, cameraFar = 800): THREE.Mesh {

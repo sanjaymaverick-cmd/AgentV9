@@ -105,8 +105,11 @@ export class MissionRunner {
       if (e.state.isRiding && e.bikePos.y > MISSION.step4SpeedPathMinY && e.bikePos.distanceTo(new THREE.Vector3(85, 8, 20)) < MISSION.step4SpeedPathDist) {
         this.checkStep('step_4_infiltrate_station', 'speed');
       }
-      // Stealth path: wearing maintenance disguise near station interior
-      else if (e.state.currentDisguise === 'maintenance_tech' && distToObjective < MISSION.step4StealthDist) {
+      // Stealth path: maintenance disguise through the west vent into the hall
+      else if (
+        e.state.currentDisguise === 'maintenance_tech' &&
+        pointInAabb(pPos.x, pPos.z, e.world.stationInterior)
+      ) {
         this.checkStep('step_4_infiltrate_station', 'stealth');
       }
     }

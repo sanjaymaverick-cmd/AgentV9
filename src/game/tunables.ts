@@ -209,7 +209,6 @@ export const MISSION = {
   step2ScanDist: 10,
   step4SpeedPathMinY: 6,
   step4SpeedPathDist: 15,
-  step4StealthDist: 12,
   bossStepIndex: 4,
   objectiveXP: 200,
 } as const;

@@ -113,6 +113,8 @@ export interface WorldObjects {
   museumStaffRoom: { minX: number; maxX: number; minZ: number; maxZ: number };
   interiorColliders: THREE.Box3[];
   stationCraneGate: THREE.Mesh;
+  stationCraneGateBox: THREE.Box3;
+  stationInterior: { minX: number; maxX: number; minZ: number; maxZ: number };
   sunLight: THREE.DirectionalLight; // exposed so quality presets can retune shadows
   nightSky: THREE.Mesh;
 }
@@ -452,7 +454,6 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   // B. Technology Museum — hollow enterable hall (C5)
   const museum = createTechMuseum();
   scene.add(museum.group);
-  const interiorColliders = museum.interiorColliders;
   const museumStaffDoor = museum.staffDoor;
   const museumStaffRoom = museum.staffRoom;
   const museumLaserBox = museum.laserBox;
@@ -466,15 +467,13 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   scene.add(ventRamp.mesh);
   stuntRamps.push(ventRamp);
 
-  // C. Monorail Cargo Station — still a solid mesh with a proximity objective
-  // (step 4 stealth completes inside the footprint). No outer AABB until it is
-  // hollowed like the museum; colliding it would block that step.
-  scene.add(createCargoStation());
-
-  const craneGate = new THREE.Mesh(new THREE.BoxGeometry(10, 8, 1), new THREE.MeshStandardMaterial({ color: '#ca8a04', metalness: 0.5 }));
-  craneGate.position.set(85, 4, 7.5);
-  craneGate.name = 'StationCraneGate';
-  scene.add(craneGate);
+  // C. Monorail Cargo Station — hollow warehouse (south gate / west vent / rail slot)
+  const station = createCargoStation();
+  scene.add(station.group);
+  const interiorColliders = museum.interiorColliders.concat(station.interiorColliders);
+  const craneGate = station.craneGate;
+  const stationCraneGateBox = station.craneGateBox;
+  const stationInterior = station.interior;
 
   // Elevated Monorail Track Beam & Pillars
   [
@@ -605,7 +604,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
 
   const terminalDefs: { id: string; name: string; pos: [number, number, number] }[] = [
     { id: 'term_museum_dock', name: 'Museum Laser Security Terminal', pos: [-10, 0.8, -76] },
-    { id: 'term_station_crane', name: 'Cargo Gantry Crane Console', pos: [78, 0.8, 8] },
+    { id: 'term_station_crane', name: 'Cargo Gantry Crane Console', pos: [76, 0.8, 5.2] },
     { id: 'term_city_decoy', name: 'Plaza Hologram Projector Node', pos: [8, 0.8, 12] },
   ];
 
@@ -672,9 +671,9 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       id: 'bot_station_1',
       type: 'guard_bot',
       name: 'CHAOS Station Patrol',
-      position: [75, 0, 20],
+      position: [85, 0, 20],
       rotation: -Math.PI / 2,
-      patrolPoints: [[75, 0, 5], [75, 0, 40]],
+      patrolPoints: [[85, 0, 14], [85, 0, 44]],
       currentPatrolIndex: 0,
       viewAngle: 65,
       viewDistance: 9,
@@ -732,7 +731,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     [0, 0, -70],
     [-12, 0, -83],
     [12, 0, -83],
-    [75, 0, 20],
+    [85, 0, 20],
     [85, 0, 10],
     [70, 0, 10],
     [0, 0, -76],
@@ -1203,6 +1202,8 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     museumStaffRoom,
     interiorColliders,
     stationCraneGate: craneGate,
+    stationCraneGateBox,
+    stationInterior,
     sunLight,
     nightSky,
   };
@@ -1213,6 +1214,8 @@ export function gatherCollisionBoxes(world: WorldObjects): THREE.Box3[] {
   const boxes = world.colliders.concat(world.interiorColliders);
   if (world.museumLaserGate.visible) boxes.push(world.museumLaserBox);
   if (!world.museumStaffDoor.open) boxes.push(world.museumStaffDoor.box);
+  // Closed crane gate (hack raises the mesh to y ≥ 8).
+  if (world.stationCraneGate.position.y < 8) boxes.push(world.stationCraneGateBox);
   return boxes;
 }
 
