@@ -3,11 +3,9 @@ import { QualityLevel } from '../types/game';
 /**
  * Graphics quality presets (spec §26). LOW / MEDIUM / HIGH govern the levers that
  * actually move frame time on a phone: renderer pixel ratio, shadows + shadow map
- * resolution, draw distance / fog, and particle budgets.
- *
- * `trafficCount` / `pedestrianCount` are declared for completeness but the vertical
- * slice only spawns 4 of each — surplus agents are just hidden. TODO: honour these for
- * real once the city has more autonomous agents.
+ * resolution, draw distance / fog, particle budgets, and how many traffic cars /
+ * sidewalk pedestrians stay visible. The world spawns HIGH's pool; applyQuality
+ * hides the surplus.
  */
 export interface QualityPreset {
   pixelRatioCap: number;
@@ -58,8 +56,8 @@ export const QUALITY_PRESETS: Record<QualityLevel, QualityPreset> = {
     shadowMapSize: 2048,
     drawDistance: 800,
     fogDensity: 0.005,
-    trafficCount: 4,
-    pedestrianCount: 4,
+    trafficCount: 8,
+    pedestrianCount: 8,
     maxDriftParticles: 80,
     maxRefuelParticles: 40,
     chaosInterceptorCount: 3,

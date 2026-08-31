@@ -14,6 +14,7 @@ import {
   createRaceCheckpoint,
 } from './models';
 import { DOWNTOWN_RACE_GATES } from './tunables';
+import { QUALITY_PRESETS } from './quality';
 import { SecurityBot, CollectibleItem, CityPOI, NPCLocal, RestrictedZone } from '../types/game';
 import {
   addNightSky,
@@ -946,42 +947,36 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     });
   });
 
-  // Pedestrian Citizens walking on sidewalks
+  // Pedestrian sidewalk loops — spawn HIGH's pool; quality hides the surplus.
+  const pedLoops: [number, number][][] = [
+    [[-18, -18], [-18, -60], [-45, -60], [-45, -18]],
+    [[18, -18], [60, -18], [60, -50], [18, -50]],
+    [[-18, 18], [-60, 18], [-60, 60], [-18, 60]],
+    [[18, 18], [18, 60], [60, 60], [60, 18]],
+  ];
   const pedestrianConfigs: {
     id: string;
     name: string;
     color: string;
     route: [number, number][];
+    startIdx: number;
   }[] = [
-    {
-      id: 'ped_1',
-      name: 'Citizen Kai',
-      color: '#6366f1',
-      route: [[-18, -18], [-18, -60], [-45, -60], [-45, -18]],
-    },
-    {
-      id: 'ped_2',
-      name: 'Citizen Zoe',
-      color: '#14b8a6',
-      route: [[18, -18], [60, -18], [60, -50], [18, -50]],
-    },
-    {
-      id: 'ped_3',
-      name: 'Citizen Leo',
-      color: '#e11d48',
-      route: [[-18, 18], [-60, 18], [-60, 60], [-18, 60]],
-    },
-    {
-      id: 'ped_4',
-      name: 'Citizen Sam',
-      color: '#ca8a04',
-      route: [[18, 18], [18, 60], [60, 60], [60, 18]],
-    },
+    { id: 'ped_1', name: 'Citizen Kai', color: '#6366f1', route: pedLoops[0], startIdx: 0 },
+    { id: 'ped_2', name: 'Citizen Zoe', color: '#14b8a6', route: pedLoops[1], startIdx: 0 },
+    { id: 'ped_3', name: 'Citizen Leo', color: '#e11d48', route: pedLoops[2], startIdx: 0 },
+    { id: 'ped_4', name: 'Citizen Sam', color: '#ca8a04', route: pedLoops[3], startIdx: 0 },
+    { id: 'ped_5', name: 'Citizen Nia', color: '#a855f7', route: pedLoops[0], startIdx: 2 },
+    { id: 'ped_6', name: 'Citizen Ari', color: '#22c55e', route: pedLoops[1], startIdx: 2 },
+    { id: 'ped_7', name: 'Citizen Jun', color: '#f97316', route: pedLoops[2], startIdx: 2 },
+    { id: 'ped_8', name: 'Citizen Rem', color: '#0ea5e9', route: pedLoops[3], startIdx: 2 },
   ];
+  if (pedestrianConfigs.length < QUALITY_PRESETS.high.pedestrianCount) {
+    throw new Error('Spawn fewer pedestrians than the HIGH quality budget');
+  }
 
   pedestrianConfigs.forEach((pCfg, idx) => {
     const pMesh = createLocalNPCMesh(pCfg.color, '#fed7aa', false, pCfg.name);
-    const start = pCfg.route[0];
+    const start = pCfg.route[pCfg.startIdx] ?? pCfg.route[0];
     pMesh.group.position.set(start[0], 0.22, start[1]);
     scene.add(pMesh.group);
 
@@ -1008,7 +1003,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       rightArm: pMesh.rightArm,
       isPedestrian: true,
       patrolRoute: pCfg.route,
-      patrolIndex: 0,
+      patrolIndex: pCfg.startIdx,
       patrolProgress: (idx * 0.25) % 1.0,
     });
   });
@@ -1022,12 +1017,14 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     color: string;
     speed: number;
     route: [number, number][];
+    progress: number;
   }[] = [
     {
       id: 'traffic_patrol_1',
       style: 'patrol',
       color: '#0284c7',
       speed: 12,
+      progress: 0,
       route: [[-50, -50], [50, -50], [50, 50], [-50, 50]],
     },
     {
@@ -1035,6 +1032,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       style: 'sports',
       color: '#ec4899',
       speed: 18,
+      progress: 0.25,
       route: [[-100, -30], [-30, -100], [70, -100], [100, 30], [-30, 80]],
     },
     {
@@ -1042,6 +1040,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       style: 'sedan',
       color: '#10b981',
       speed: 14,
+      progress: 0.5,
       route: [[30, -70], [30, 70], [-70, 70], [-70, -70]],
     },
     {
@@ -1049,11 +1048,47 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       style: 'sports',
       color: '#eab308',
       speed: 16,
+      progress: 0.75,
+      route: [[70, 60], [-60, 60], [-60, -60], [70, -60]],
+    },
+    {
+      id: 'traffic_patrol_2',
+      style: 'patrol',
+      color: '#38bdf8',
+      speed: 11,
+      progress: 0.5,
+      route: [[-50, -50], [50, -50], [50, 50], [-50, 50]],
+    },
+    {
+      id: 'traffic_sports_3',
+      style: 'sports',
+      color: '#f472b6',
+      speed: 17,
+      progress: 0.7,
+      route: [[-100, -30], [-30, -100], [70, -100], [100, 30], [-30, 80]],
+    },
+    {
+      id: 'traffic_sedan_2',
+      style: 'sedan',
+      color: '#34d399',
+      speed: 13,
+      progress: 0.15,
+      route: [[30, -70], [30, 70], [-70, 70], [-70, -70]],
+    },
+    {
+      id: 'traffic_sports_4',
+      style: 'sports',
+      color: '#facc15',
+      speed: 15,
+      progress: 0.35,
       route: [[70, 60], [-60, 60], [-60, -60], [70, -60]],
     },
   ];
+  if (trafficConfigs.length < QUALITY_PRESETS.high.trafficCount) {
+    throw new Error('Spawn fewer traffic cars than the HIGH quality budget');
+  }
 
-  trafficConfigs.forEach((cfg, idx) => {
+  trafficConfigs.forEach((cfg) => {
     const car = createCyberTrafficCar(cfg.style, cfg.color);
     const startPoint = cfg.route[0];
     car.group.position.set(startPoint[0], 0, startPoint[1]);
@@ -1066,7 +1101,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       speed: cfg.speed,
       routeIndex: 0,
       route: cfg.route,
-      progress: (idx * 0.25) % 1.0,
+      progress: cfg.progress,
       style: cfg.style,
       color: cfg.color,
     });
