@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { NPCLocal } from '../types/game';
 import type { GameEngine } from './gameEngine';
-import { gatherInteriorBoxes, type WorldObjects } from './world';
+import { gatherCollisionBoxes, type WorldObjects } from './world';
 import { resolveCircleAabbs } from './collision';
 import { soundEngine } from './audio';
 import { LOD } from './tunables';
@@ -69,7 +69,7 @@ export class WorldSystems {
       }
     }
 
-    resolveCircleAabbs(e.playerPos, 0.55, gatherInteriorBoxes(e.world));
+    resolveCircleAabbs(e.playerPos, 0.55, gatherCollisionBoxes(e.world));
 
     e.agentChar.group.position.copy(e.playerPos);
     e.agentChar.group.rotation.y = e.playerRot;

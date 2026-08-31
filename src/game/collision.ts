@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
 /**
- * Circle-vs-AABB push-out on XZ. Used for the museum interior (the rest of the
- * city still has no wall collision — those colliders are decorative footprints).
- * Airborne actors (vent jump, drone) skip when `pos.y` is above `airborneY`.
+ * Circle-vs-AABB push-out on XZ for the bike and on-foot agent against city
+ * footprints plus museum interior walls. Airborne actors (vent jump, drone)
+ * skip when `pos.y` is above `airborneY`.
  */
 export function resolveCircleAabbs(
   pos: THREE.Vector3,

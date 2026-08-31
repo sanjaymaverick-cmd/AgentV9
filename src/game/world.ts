@@ -466,9 +466,10 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   scene.add(ventRamp.mesh);
   stuntRamps.push(ventRamp);
 
-  // C. Monorail Cargo Station
+  // C. Monorail Cargo Station — still a solid mesh with a proximity objective
+  // (step 4 stealth completes inside the footprint). No outer AABB until it is
+  // hollowed like the museum; colliding it would block that step.
   scene.add(createCargoStation());
-  colliders.push(buildingCollider(85, 30, 40, 45, 14));
 
   const craneGate = new THREE.Mesh(new THREE.BoxGeometry(10, 8, 1), new THREE.MeshStandardMaterial({ color: '#ca8a04', metalness: 0.5 }));
   craneGate.position.set(85, 4, 7.5);
@@ -1207,8 +1208,9 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   };
 }
 
-export function gatherInteriorBoxes(world: WorldObjects): THREE.Box3[] {
-  const boxes = world.interiorColliders.slice();
+/** City footprints + museum walls + currently-closed gates. */
+export function gatherCollisionBoxes(world: WorldObjects): THREE.Box3[] {
+  const boxes = world.colliders.concat(world.interiorColliders);
   if (world.museumLaserGate.visible) boxes.push(world.museumLaserBox);
   if (!world.museumStaffDoor.open) boxes.push(world.museumStaffDoor.box);
   return boxes;

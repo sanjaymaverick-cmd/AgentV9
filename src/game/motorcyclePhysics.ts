@@ -3,7 +3,7 @@ import type { GameEngine } from './gameEngine';
 import { soundEngine } from './audio';
 import { BIKE } from './tunables';
 import { resolveCircleAabbs } from './collision';
-import { gatherInteriorBoxes } from './world';
+import { gatherCollisionBoxes } from './world';
 import { stepMotorcycleArcade } from './motorcycleArcade';
 
 /**
@@ -89,7 +89,7 @@ export class MotorcyclePhysics {
       e.addStuntScore(Math.round(dt * BIKE.driftScorePerSec), 'CYBER DRIFT');
     }
 
-    resolveCircleAabbs(e.bikePos, 1.15, gatherInteriorBoxes(e.world));
+    resolveCircleAabbs(e.bikePos, 1.15, gatherCollisionBoxes(e.world));
 
     // Check Stunt Ramps Collision
     const bikeBox = new THREE.Box3().setFromCenterAndSize(e.bikePos, new THREE.Vector3(1.5, 1.5, 2.5));
