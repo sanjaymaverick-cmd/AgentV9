@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { DisguiseType, GadgetType } from '../types/game';
 import type { GameEngine } from './gameEngine';
-import type { WorldObjects } from './world';
+import { raiseStationGate, type WorldObjects } from './world';
 import { soundEngine } from './audio';
 import { STEALTH } from './tunables';
 
@@ -293,7 +293,7 @@ export class PlayerActions {
       e.setNotification('Museum security unlocked — staff door, dock laser and cameras are down.');
       e.checkMissionStepComplete('step_2_scan_dock', 'smarts');
     } else if (term.id === 'term_station_crane') {
-      e.world.stationCraneGate.position.y += 6;
+      raiseStationGate(e.world);
       e.setNotification('Station Gantry Crane Raised! Warehouse entrance open.');
       e.checkMissionStepComplete('step_4_infiltrate_station', 'smarts');
     } else {

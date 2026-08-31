@@ -68,6 +68,18 @@ describe('migrate', () => {
     expect(upgraded!.mission.currentStepIndex).toBe(2);
     expect(upgraded!.world.collectedCollectibleIds).toEqual([]);
     expect(upgraded!.world.collectedStuntRingIds).toEqual([]);
+    expect(upgraded!.world.trippedBreakerIds).toEqual([]);
+  });
+
+  it('keeps tripped breaker ids and backfills them on older v1 blobs', () => {
+    const withBreakers = migrate({
+      version: 1,
+      world: { trippedBreakerIds: ['breaker_station'] },
+    });
+    expect(withBreakers!.world.trippedBreakerIds).toEqual(['breaker_station']);
+    const legacy = migrate({ version: 1, world: { fuelLevel: 40 } });
+    expect(legacy!.world.trippedBreakerIds).toEqual([]);
+    expect(legacy!.world.fuelLevel).toBe(40);
   });
 
   it('round-trips a well-formed v1 save', () => {

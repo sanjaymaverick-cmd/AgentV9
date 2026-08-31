@@ -184,6 +184,9 @@ export class WorldSystems {
       const p = e.projectiles[i];
       p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
       p.life -= dt;
+      if (p.type === 'emp') {
+        e.stealthAI.tripBreakers(p.mesh.position, 3.4);
+      }
 
       if (p.life <= 0) {
         e.scene.remove(p.mesh);

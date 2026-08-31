@@ -105,7 +105,7 @@ export class RadarSync {
       });
     }
 
-    // 8. Interactive Terminals & Lockers
+    // 8. Interactive Terminals, lockers and EMP breakers
     if (e.world && e.world.terminals) {
       e.world.terminals.forEach((term) => {
         entities.push({
@@ -115,6 +115,18 @@ export class RadarSync {
           z: term.position[2],
           status: term.hacked ? 'hacked' : 'active',
           label: term.name,
+        });
+      });
+    }
+    if (e.world && e.world.sideBreakers) {
+      e.world.sideBreakers.forEach((b) => {
+        entities.push({
+          id: b.id,
+          type: 'terminal',
+          x: b.position[0],
+          z: b.position[2],
+          status: b.tripped ? 'hacked' : 'active',
+          label: b.name,
         });
       });
     }

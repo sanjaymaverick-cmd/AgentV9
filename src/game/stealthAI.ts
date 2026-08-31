@@ -4,6 +4,7 @@ import { createAgentCharacter } from './models';
 import { soundEngine } from './audio';
 import { STEALTH } from './tunables';
 import { GuardAI, SoundBus } from './guardAI';
+import { raiseStationGate, type SideBreakerObject } from './world';
 
 /**
  * Stealth detection & non-lethal enforcement (spec §11, §16).
@@ -94,6 +95,8 @@ export class StealthAI {
       }
     });
 
+    this.tripBreakers(pos, radius);
+
     // 2. Check Boss Cargo Drone Relays (Step 5 climax)
     if (e.state.activeMission.currentStepIndex === 4 && e.bossDrone.group.visible) {
       e.bossDrone.relays.forEach((relay, i) => {
@@ -115,6 +118,32 @@ export class StealthAI {
         }
       });
     }
+  }
+
+  /** Overload EMP-able side breakers in radius (station Smarts alt path). */
+  tripBreakers(pos: THREE.Vector3, radius: number) {
+    const e = this.e;
+    for (const b of e.world.sideBreakers) {
+      if (b.tripped) continue;
+      if (b.mesh.position.distanceTo(pos) >= radius) continue;
+      this.tripBreaker(b);
+    }
+  }
+
+  tripBreaker(b: SideBreakerObject) {
+    const e = this.e;
+    if (b.tripped) return;
+    b.tripped = true;
+    const mat = b.mesh.material as THREE.MeshStandardMaterial;
+    mat.color.set('#22c55e');
+    mat.emissive.set('#14532d');
+    raiseStationGate(e.world);
+    soundEngine.playMissionComplete();
+    e.addXP(150, 'Station Side Breaker EMP');
+    e.setNotification('Side breaker overloaded! Warehouse gate is up.');
+    e.checkMissionStepComplete('step_4_infiltrate_station', 'smarts');
+    e.requestAutosave();
+    e.notifyState();
   }
 
   deployHologramDecoy(pos: THREE.Vector3) {

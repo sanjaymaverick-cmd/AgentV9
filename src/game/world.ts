@@ -76,6 +76,14 @@ export interface RaceCheckpointObject {
   ring: THREE.Mesh;
 }
 
+export interface SideBreakerObject {
+  id: string;
+  name: string;
+  position: [number, number, number];
+  mesh: THREE.Mesh;
+  tripped: boolean;
+}
+
 export interface UndergroundZone {
   minX: number;
   maxX: number;
@@ -119,6 +127,7 @@ export interface WorldObjects {
   stationCraneGate: THREE.Mesh;
   stationCraneGateBox: THREE.Box3;
   stationInterior: { minX: number; maxX: number; minZ: number; maxZ: number };
+  sideBreakers: SideBreakerObject[];
   sunLight: THREE.DirectionalLight; // exposed so quality presets can retune shadows
   nightSky: THREE.Mesh;
 }
@@ -478,6 +487,10 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   const craneGate = station.craneGate;
   const stationCraneGateBox = station.craneGateBox;
   const stationInterior = station.interior;
+
+  // West-wall EMP breaker (step 4 Smarts alt — "EMP the side breaker")
+  const sideBreakers: SideBreakerObject[] = [createSideBreaker('breaker_station', [63.4, 1.35, 18])];
+  scene.add(sideBreakers[0].mesh);
 
   // Elevated Monorail Track Beam & Pillars
   [
@@ -1210,9 +1223,46 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     stationCraneGate: craneGate,
     stationCraneGateBox,
     stationInterior,
+    sideBreakers,
     sunLight,
     nightSky,
   };
+}
+
+/** Raise the cargo crane gate once. Returns false if it was already up. */
+export function raiseStationGate(world: WorldObjects): boolean {
+  if (world.stationCraneGate.position.y >= 8) return false;
+  world.stationCraneGate.position.y += 6;
+  return true;
+}
+
+function createSideBreaker(id: string, pos: [number, number, number]): SideBreakerObject {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 1.7, 0.5),
+    new THREE.MeshStandardMaterial({
+      color: '#38bdf8',
+      emissive: '#0284c7',
+      emissiveIntensity: 0.85,
+      metalness: 0.55,
+      roughness: 0.35,
+    }),
+  );
+  mesh.position.set(...pos);
+  mesh.name = id;
+  const stripe = new THREE.Mesh(
+    new THREE.BoxGeometry(0.76, 0.22, 0.56),
+    new THREE.MeshBasicMaterial({ color: '#eab308' }),
+  );
+  stripe.position.y = 0.35;
+  mesh.add(stripe);
+  const lens = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.32, 0.22),
+    new THREE.MeshBasicMaterial({ color: '#7dd3fc' }),
+  );
+  lens.position.set(-0.36, 0.45, 0);
+  lens.rotation.y = Math.PI / 2;
+  mesh.add(lens);
+  return { id, name: 'Station Side Breaker', position: pos, mesh, tripped: false };
 }
 
 /** City footprints + museum walls + currently-closed gates. */

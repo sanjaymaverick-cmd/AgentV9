@@ -3,6 +3,7 @@ import { Mission } from '../types/game';
 import type { GameEngine } from './gameEngine';
 import { SaveDataV1, SAVE_DATA_VERSION } from './saveManager';
 import { STORY_MISSION_MIDNIGHT_PROTOTYPE, SIDE_MISSIONS } from './missionEngine';
+import { raiseStationGate } from './world';
 
 /**
  * Turns the live engine into a `SaveDataV1` snapshot and restores one back into the
@@ -46,6 +47,7 @@ export class SaveController {
         collectedCollectibleIds: e.world.collectibles.filter((c) => c.collected).map((c) => c.id),
         collectedStuntRingIds: e.world.stuntRings.filter((r) => r.collected).map((r) => r.id),
         hackedTerminalIds: e.world.terminals.filter((t) => t.hacked).map((t) => t.id),
+        trippedBreakerIds: e.world.sideBreakers.filter((b) => b.tripped).map((b) => b.id),
         chaosAlertLevel: e.state.chaosAlertLevel,
         chaosAlertProgress: e.state.chaosAlertProgress,
         fuelLevel: e.state.fuelLevel,
@@ -136,7 +138,16 @@ export class SaveController {
           e.world.museumStaffDoor.mesh.visible = false;
           e.stealthAI.disableCamerasInZone('museum_dock');
         }
-        if (t.id === 'term_station_crane') e.world.stationCraneGate.position.y += 6;
+        if (t.id === 'term_station_crane') raiseStationGate(e.world);
+      }
+    });
+    e.world.sideBreakers.forEach((b) => {
+      if (w.trippedBreakerIds?.includes(b.id)) {
+        b.tripped = true;
+        const mat = b.mesh.material as THREE.MeshStandardMaterial;
+        mat.color.set('#22c55e');
+        mat.emissive.set('#14532d');
+        raiseStationGate(e.world);
       }
     });
 

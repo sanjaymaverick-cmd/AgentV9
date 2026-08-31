@@ -59,6 +59,7 @@ export interface SaveDataV1 {
     collectedCollectibleIds: string[];
     collectedStuntRingIds: string[];
     hackedTerminalIds: string[];
+    trippedBreakerIds: string[];
     chaosAlertLevel: number;
     chaosAlertProgress: number;
     fuelLevel: number;
@@ -135,6 +136,7 @@ export function makeDefaultSaveData(): SaveDataV1 {
       collectedCollectibleIds: [],
       collectedStuntRingIds: [],
       hackedTerminalIds: [],
+      trippedBreakerIds: [],
       chaosAlertLevel: 0,
       chaosAlertProgress: 0,
       fuelLevel: 100,
@@ -218,6 +220,9 @@ function normalize(raw: AnyRecord): SaveDataV1 {
     : [];
   merged.world.hackedTerminalIds = Array.isArray(merged.world.hackedTerminalIds)
     ? merged.world.hackedTerminalIds
+    : [];
+  merged.world.trippedBreakerIds = Array.isArray(merged.world.trippedBreakerIds)
+    ? merged.world.trippedBreakerIds
     : [];
   return merged;
 }
