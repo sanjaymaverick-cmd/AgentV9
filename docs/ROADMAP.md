@@ -170,4 +170,4 @@ Spec §38, restated as a checklist to tick off:
 - [x] Progress saves and reloads <!-- A1: versioned SaveManager + migration -->
 - [ ] Runs acceptably on a mid-range phone
 - [ ] APK installs
-- [ ] Signed AAB can be produced
+- [x] Signed AAB can be produced <!-- D4: `npm run android:aab`; keystore is local, not committed -->

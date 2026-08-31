@@ -19,7 +19,8 @@
     "clean": "rm -rf dist node_modules/.vite",
     "cap:sync": "npm run build && cap sync android",
     "cap:assets": "capacitor-assets generate --android",
-    "android": "npm run cap:sync && cap open android"
+    "android": "npm run cap:sync && cap open android",
+    "android:aab": "npm run cap:sync && node scripts/android-aab.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

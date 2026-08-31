@@ -15,6 +15,9 @@ coverage/
 
 # local env — never commit real keys
 .env*
+*.jks
+*.keystore
+android/keystore.properties
 # (no env vars are needed — the game is fully offline)
 
 # editor / OS
