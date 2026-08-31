@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+android/
+ios/
+
+# caches
+.vite/
+coverage/
+*.tsbuildinfo
+
+# local env — never commit real keys
+.env*
+# (no env vars are needed — the game is fully offline)
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*
+
+# test artefacts
+/tmp-screenshots/
+shot*.png
