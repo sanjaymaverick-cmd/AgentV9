@@ -305,9 +305,16 @@ export class GameEngine {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(65, container.clientWidth / container.clientHeight, 0.1, 800);
     
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+      // Dev-only: lets canvas.toDataURL capture a frame. Production keeps the default (false).
+      preserveDrawingBuffer: !!import.meta.env.DEV,
+    });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.18;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);

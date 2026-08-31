@@ -13,6 +13,15 @@ import {
   createLocalNPCMesh
 } from './models';
 import { SecurityBot, CollectibleItem, CityPOI, NPCLocal } from '../types/game';
+import {
+  addNightSky,
+  buildingCollider,
+  createAcademyHQ,
+  createCargoStation,
+  createCityBuilding,
+  createTechMuseum,
+  type BuildingStyle,
+} from './cityBuildings';
 
 export interface TrafficVehicle {
   id: string;
@@ -105,13 +114,15 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   // ---------------------------------------------------
   // 1. SKY, FOG & AMBIENT LIGHTING
   // ---------------------------------------------------
-  scene.background = new THREE.Color('#0b1120');
-  scene.fog = new THREE.FogExp2('#0b1120', 0.005);
+  scene.fog = new THREE.FogExp2('#121826', 0.0042);
+  addNightSky(scene);
 
-  const hemiLight = new THREE.HemisphereLight('#38bdf8', '#090d16', 0.85);
+  const hemiLight = new THREE.HemisphereLight('#c5d4e8', '#1a1524', 0.72);
   scene.add(hemiLight);
+  const fill = new THREE.AmbientLight('#1b2436', 0.22);
+  scene.add(fill);
 
-  const sunLight = new THREE.DirectionalLight('#ffffff', 1.45);
+  const sunLight = new THREE.DirectionalLight('#ffe8c8', 1.7);
   sunLight.position.set(70, 110, 45);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.width = 2048;
@@ -330,6 +341,13 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   spire.position.set(0, 4.2, 0);
   scene.add(spire);
 
+  [10, 16, 22].forEach((r, i) => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.07, 6, 32), neonCyanMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.2 + i * 0.02;
+    scene.add(ring);
+  });
+
   // ---------------------------------------------------
   // 7. STREETLIGHTS, TREES, BUS STOPS & BENCHES
   // ---------------------------------------------------
@@ -400,56 +418,26 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   // ---------------------------------------------------
   // 8. MAJOR LANDMARK BUILDINGS & MISSIONS
   // ---------------------------------------------------
-  const darkSteel = new THREE.MeshStandardMaterial({ color: '#09090b', roughness: 0.4, metalness: 0.85 });
-  const glassMat = new THREE.MeshPhysicalMaterial({ color: '#7dd3fc', transmission: 0.7, opacity: 0.8, transparent: true, roughness: 0.1 });
+  const darkSteel = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.4, metalness: 0.7 });
 
-  // A. V9 Academy Spy HQ (West District)
-  const hqBase = new THREE.Mesh(new THREE.BoxGeometry(34, 14, 28), darkSteel);
-  hqBase.position.set(-80, 7, -50);
-  hqBase.castShadow = true;
-  hqBase.receiveShadow = true;
-  scene.add(hqBase);
-  colliders.push(new THREE.Box3().setFromObject(hqBase));
+  // A. V9 Academy Spy HQ (West District) — collider footprints unchanged
+  scene.add(createAcademyHQ());
+  colliders.push(buildingCollider(-80, -50, 34, 28, 14));
+  colliders.push(buildingCollider(-80, -50, 18, 18, 62));
 
-  const hqTower = new THREE.Mesh(new THREE.CylinderGeometry(8, 11, 48, 8), glassMat);
-  hqTower.position.set(-80, 36, -50);
-  scene.add(hqTower);
-  colliders.push(new THREE.Box3().setFromObject(hqTower));
-
-  const emblem = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.4, 8, 24), neonCyanMat);
-  emblem.position.set(-80, 62, -50);
-  scene.add(emblem);
-
-  // B. Technology Museum (North District - Main Mission)
-  const musMat = new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.6, roughness: 0.3 });
-  const musHall = new THREE.Mesh(new THREE.BoxGeometry(38, 10, 32), musMat);
-  musHall.position.set(0, 5, -85);
-  musHall.castShadow = true;
-  scene.add(musHall);
-  colliders.push(new THREE.Box3().setFromObject(musHall));
-
-  const pyramid = new THREE.Mesh(new THREE.ConeGeometry(14, 12, 4), glassMat);
-  pyramid.geometry.rotateY(Math.PI / 4);
-  pyramid.position.set(0, 16, -85);
-  scene.add(pyramid);
-
-  // Loading Dock & Security Laser Gate
-  const dock = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 12), darkSteel);
-  dock.position.set(0, 3, -107);
-  scene.add(dock);
-  colliders.push(new THREE.Box3().setFromObject(dock));
+  // B. Technology Museum (North District)
+  scene.add(createTechMuseum());
+  colliders.push(buildingCollider(0, -85, 38, 32, 10));
+  colliders.push(buildingCollider(0, -107, 16, 12, 6));
 
   const laserGate = new THREE.Mesh(new THREE.PlaneGeometry(8, 4), new THREE.MeshBasicMaterial({ color: '#ef4444', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
   laserGate.position.set(0, 2, -101);
   laserGate.name = 'MuseumLaserGate';
   scene.add(laserGate);
 
-  // C. Monorail Cargo Station & Elevated Track (East District)
-  const station = new THREE.Mesh(new THREE.BoxGeometry(40, 14, 45), darkSteel);
-  station.position.set(85, 7, 30);
-  station.castShadow = true;
-  scene.add(station);
-  colliders.push(new THREE.Box3().setFromObject(station));
+  // C. Monorail Cargo Station
+  scene.add(createCargoStation());
+  colliders.push(buildingCollider(85, 30, 40, 45, 14));
 
   const craneGate = new THREE.Mesh(new THREE.BoxGeometry(10, 8, 1), new THREE.MeshStandardMaterial({ color: '#ca8a04', metalness: 0.5 }));
   craneGate.position.set(85, 4, 7.5);
@@ -480,37 +468,52 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   scene.add(speedRamp.mesh);
   stuntRamps.push(speedRamp);
 
-  // D. City Skyscrapers & Cyberpunk Towers
-  const buildingColors = ['#1e293b', '#0f172a', '#334155', '#1e1b4b', '#042f2e'];
-  const buildingCoords: [number, number, number, number, number][] = [
-    [-45, -30, 22, 22, 35],
-    [-45, 25, 20, 24, 45],
-    [-45, 75, 24, 20, 28],
-    [45, -35, 24, 22, 40],
-    [45, 30, 22, 20, 50],
-    [45, 80, 26, 22, 32],
-    [-85, 25, 22, 22, 38],
-    [-85, 75, 20, 20, 30],
-    [0, 60, 28, 22, 42],
-    [0, 110, 30, 24, 36],
+  // D. District towers — windowed facades, setbacks, roof plant, neon corners
+  const towerDefs: {
+    x: number; z: number; w: number; d: number; h: number;
+    style: BuildingStyle; sign: string; seed: number;
+  }[] = [
+    { x: -45, z: -30, w: 22, d: 22, h: 35, style: 'office', sign: 'NOVA BANK', seed: 21 },
+    { x: -45, z: 25, w: 20, d: 24, h: 45, style: 'tech', sign: 'MESH LABS', seed: 22 },
+    { x: -45, z: 75, w: 24, d: 20, h: 28, style: 'residential', sign: 'HELIX COURT', seed: 23 },
+    { x: 45, z: -35, w: 24, d: 22, h: 40, style: 'plaza', sign: 'CYBER BITES', seed: 24 },
+    { x: 45, z: 30, w: 22, d: 20, h: 50, style: 'tech', sign: 'PULSE TOWER', seed: 25 },
+    { x: 45, z: 80, w: 26, d: 22, h: 32, style: 'office', sign: 'DRIFT ARCADE', seed: 26 },
+    { x: -85, z: 25, w: 22, d: 22, h: 38, style: 'tech', sign: 'ACADEMY ANNEX', seed: 27 },
+    { x: -85, z: 75, w: 20, d: 20, h: 30, style: 'residential', sign: 'WEST LOFTS', seed: 28 },
+    { x: 0, z: 60, w: 28, d: 22, h: 42, style: 'office', sign: 'SKYLINE HOTEL', seed: 29 },
+    { x: 0, z: 110, w: 30, d: 24, h: 36, style: 'plaza', sign: 'NORTH SPIRE', seed: 30 },
   ];
 
-  buildingCoords.forEach(([x, z, w, d, h], idx) => {
-    const col = buildingColors[idx % buildingColors.length];
-    const bMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: col, roughness: 0.3, metalness: 0.7 }));
-    bMesh.position.set(x, h / 2, z);
-    bMesh.castShadow = true;
-    scene.add(bMesh);
-    colliders.push(new THREE.Box3().setFromObject(bMesh));
+  towerDefs.forEach((t) => {
+    const b = createCityBuilding({
+      width: t.w,
+      depth: t.d,
+      height: t.h,
+      style: t.style,
+      seed: t.seed,
+      name: t.sign,
+      sign: t.sign,
+    });
+    b.position.set(t.x, 0, t.z);
+    scene.add(b);
+    colliders.push(buildingCollider(t.x, t.z, t.w, t.d, t.h));
+  });
 
-    if (idx % 2 === 0) {
-      const bb = new THREE.Mesh(
-        new THREE.PlaneGeometry(w * 0.7, 5),
-        new THREE.MeshBasicMaterial({ color: idx % 4 === 0 ? '#38bdf8' : '#f43f5e', side: THREE.DoubleSide })
-      );
-      bb.position.set(x, h - 4, z + d / 2 + 0.1);
-      scene.add(bb);
-    }
+  // Street-level shop blocks so avenues aren't empty lots
+  const shopDefs: { x: number; z: number; w: number; d: number; h: number; style: BuildingStyle; sign: string; seed: number }[] = [
+    { x: -30, z: -52, w: 12, d: 10, h: 11, style: 'plaza', sign: 'NITRO CAFE', seed: 41 },
+    { x: 30, z: -52, w: 12, d: 10, h: 12, style: 'office', sign: 'CHIP SHOP', seed: 42 },
+    { x: -30, z: 42, w: 12, d: 10, h: 10, style: 'residential', sign: 'VINYL MART', seed: 43 },
+    { x: 30, z: 42, w: 12, d: 10, h: 13, style: 'tech', sign: 'GADGET HUB', seed: 44 },
+  ];
+  shopDefs.forEach((t) => {
+    const b = createCityBuilding({
+      width: t.w, depth: t.d, height: t.h, style: t.style, seed: t.seed, name: t.sign, sign: t.sign,
+    });
+    b.position.set(t.x, 0, t.z);
+    scene.add(b);
+    colliders.push(buildingCollider(t.x, t.z, t.w, t.d, t.h));
   });
 
   // Stunt Ramps
