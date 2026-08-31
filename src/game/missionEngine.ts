@@ -86,7 +86,7 @@ export const SIDE_MISSIONS: Mission[] = [
         id: 'race_sprint',
         title: 'Complete Circuit',
         instruction: 'Hit all checkpoints in order before time runs out!',
-        targetPosition: [0, 1, 0],
+        targetPosition: [18, 1, 0],
         approachHint: {
           speed: 'Maintain drift boost around corners and hit all orange jump ramps!',
           stealth: 'N/A',

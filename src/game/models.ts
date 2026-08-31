@@ -1563,6 +1563,39 @@ export function createBusStop(): THREE.Group {
   return group;
 }
 
+/** Vertical drive-through hoop for the downtown sprint (spec §19). */
+export function createRaceCheckpoint(index: number): { group: THREE.Group; ring: THREE.Mesh } {
+  const group = new THREE.Group();
+  group.name = `RaceGate_${index + 1}`;
+
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: '#38bdf8',
+    transparent: true,
+    opacity: 0.85,
+    side: THREE.DoubleSide,
+  });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.16, 8, 24), ringMat);
+  ring.position.y = 2.2;
+  group.add(ring);
+
+  const pad = new THREE.Mesh(
+    new THREE.RingGeometry(1.6, 3.0, 24),
+    new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.28, side: THREE.DoubleSide })
+  );
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.y = 0.08;
+  group.add(pad);
+
+  const post = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.1, 2.0, 6),
+    new THREE.MeshStandardMaterial({ color: '#0f172a', metalness: 0.7, roughness: 0.3 })
+  );
+  post.position.set(3.2, 1.0, 0);
+  group.add(post);
+
+  return { group, ring };
+}
+
 // 4. Street Bench
 export function createStreetBench(): THREE.Group {
   const group = new THREE.Group();

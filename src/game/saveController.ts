@@ -17,7 +17,8 @@ export class SaveController {
   /** Snapshot every piece of progress the spec requires to survive a reload. */
   export(): SaveDataV1 {
     const e = this.e;
-    const m = e.state.activeMission;
+    // If a side sprint is running, persist the parked story — the race itself is a session overlay.
+    const m = e.stashedStoryMission ?? e.state.activeMission;
     const isSideQuest = SIDE_MISSIONS.some((s) => s.id === m.id);
     return {
       version: SAVE_DATA_VERSION,
@@ -137,6 +138,7 @@ export class SaveController {
     e.state.chaosAlertLevel = w.chaosAlertLevel;
     e.state.chaosAlertProgress = w.chaosAlertProgress;
     e.chaosAlertManager.syncToState();
+    e.raceManager.onMissionRestored();
     e.state.fuelLevel = w.fuelLevel;
     e.state.nitroLevel = w.nitroLevel;
 

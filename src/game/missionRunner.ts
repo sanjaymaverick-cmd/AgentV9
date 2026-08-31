@@ -4,6 +4,7 @@ import { MissionPathChoice } from '../types/game';
 import type { GameEngine } from './gameEngine';
 import { soundEngine } from './audio';
 import { MISSION } from './tunables';
+import { STORY_MISSION_MIDNIGHT_PROTOTYPE } from './missionEngine';
 
 /**
  * Story mission runner (spec §10, §18) — advances "The Midnight Prototype" by checking
@@ -66,6 +67,9 @@ export class MissionRunner {
         ring.scale.set(ringScale, ringScale, ringScale);
       }
     }
+
+    // Story-only step gates. Side missions (races, drone tag) have their own managers.
+    if (mission.id !== STORY_MISSION_MIDNIGHT_PROTOTYPE.id) return;
 
     // Step 1: Reach Museum
     if (mission.currentStepIndex === 0 && distToObjective < MISSION.step1ReachDist) {

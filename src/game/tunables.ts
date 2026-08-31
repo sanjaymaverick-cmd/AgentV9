@@ -184,3 +184,25 @@ export const MISSION = {
   bossStepIndex: 4,
   objectiveXP: 200,
 } as const;
+
+/** Downtown checkpoint sprint (spec §19) — see RaceManager. */
+export const RACE = {
+  downtownId: 'side_race_downtown',
+  parTimeSec: 45,
+  countdownSec: 3,
+  passRadius: 6.5, // xz metres — jumps still count
+  wrongGateCooldownSec: 1.4,
+  winHoldSec: 2.4,
+} as const;
+
+/** Street-level loop around Central Plaza. Index 0 is the start gate (near Maya). */
+export const DOWNTOWN_RACE_GATES: readonly (readonly [number, number, number])[] = [
+  [18, 1.2, 0],
+  [0, 1.2, -30],
+  [-30, 1.2, -30],
+  [-30, 1.2, 0],
+  [-30, 1.2, 30],
+  [0, 1.2, 30],
+  [30, 1.2, 30],
+  [30, 1.2, 0],
+];

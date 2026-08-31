@@ -45,6 +45,7 @@ import { NPCDialogue } from './npcDialogue';
 import { GamepadInput } from './gamepadInput';
 import { SaveController } from './saveController';
 import { ChaosAlertManager } from './chaosAlertManager';
+import { RaceManager, RacePhase } from './raceManager';
 import { QualityPreset, QUALITY_PRESETS } from './quality';
 
 export interface GameState {
@@ -71,6 +72,16 @@ export interface GameState {
   chaosAlertLevel: number; // 0 to 5
   chaosAlertProgress: number; // 0 to 100 toward the next level
   chaosPhase: 'idle' | 'escalating' | 'cooling';
+  raceActive: boolean;
+  racePhase: RacePhase;
+  raceId: string;
+  raceTimeSec: number;
+  raceParSec: number;
+  raceGateIndex: number;
+  raceGateTotal: number;
+  raceCountdownSec: number;
+  raceBestTimeSec: number | null;
+  raceWrongGate: boolean;
   nearInteraction: string | null;
   activeMission: Mission;
   stats: PlayerStats;
@@ -238,6 +249,9 @@ export class GameEngine {
   public saveController!: SaveController;
   public gamepadInput!: GamepadInput;
   public chaosAlertManager!: ChaosAlertManager;
+  public raceManager!: RaceManager;
+  /** Story mission parked while a side sprint runs, so accepting Maya doesn't wipe progress. */
+  public stashedStoryMission: Mission | null = null;
 
   constructor(
     container: HTMLElement,
@@ -278,6 +292,16 @@ export class GameEngine {
       chaosAlertLevel: 0,
       chaosAlertProgress: 0,
       chaosPhase: 'idle',
+      raceActive: false,
+      racePhase: 'idle',
+      raceId: '',
+      raceTimeSec: 0,
+      raceParSec: 45,
+      raceGateIndex: 0,
+      raceGateTotal: 8,
+      raceCountdownSec: 0,
+      raceBestTimeSec: null,
+      raceWrongGate: false,
       nearInteraction: null,
       activeMission: JSON.parse(JSON.stringify(STORY_MISSION_MIDNIGHT_PROTOTYPE)),
       stats: initialStats,
@@ -397,6 +421,7 @@ export class GameEngine {
     this.saveController = new SaveController(this);
     this.gamepadInput = new GamepadInput(this);
     this.chaosAlertManager = new ChaosAlertManager(this);
+    this.raceManager = new RaceManager(this);
   }
 
   private initWaypointBeacon() {
@@ -586,10 +611,13 @@ export class GameEngine {
     // 6. Update Fuel Stations & Refueling
     this.worldSystems.updateFuelStationsAndRefueling(dt);
 
-    // 7. Mission Check & Boss Drone Update
+    // 7. Downtown race (updates the current objective gate before the mission compass)
+    this.raceManager.update(dt);
+
+    // 8. Mission Check & Boss Drone Update
     this.missionRunner.update(dt);
 
-    // 8. Update Autonomous City Traffic Vehicles
+    // 9. Update Autonomous City Traffic Vehicles
     this.worldSystems.updateTrafficVehicles(dt);
 
     // 9. Update Sounds

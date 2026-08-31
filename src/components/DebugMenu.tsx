@@ -183,6 +183,9 @@ export default function DebugMenu({ engine, state, onClose }: DebugMenuProps) {
             <button onClick={() => dbg?.clearChaos()} className={btn}>
               Clear CHAOS
             </button>
+            <button onClick={() => dbg?.startDowntownRace()} className={`${btn} col-span-2`}>
+              Start downtown race
+            </button>
           </div>
           <div className="grid grid-cols-6 gap-1">
             {[0, 1, 2, 3, 4, 5].map((n) => (

@@ -16,6 +16,7 @@ import {
   Award, 
   CheckCircle2, 
   AlertTriangle,
+  Timer,
   Navigation,
   Activity,
   Fuel,
@@ -111,11 +112,11 @@ export const HUD: React.FC<HUDProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
                 <h4 className="text-[11px] font-black text-white uppercase tracking-wider">
-                  {state.activeMission.title} ({state.activeMission.currentStepIndex + 1}/5)
+                  {state.activeMission.title} ({Math.min(state.activeMission.currentStepIndex + 1, state.activeMission.steps.length)}/{state.activeMission.steps.length})
                 </h4>
               </div>
               <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
-                Active Story
+                {state.activeMission.category === 'story' ? 'Active Story' : 'Side Mission'}
               </span>
             </div>
 
@@ -130,10 +131,12 @@ export const HUD: React.FC<HUDProps> = ({
                   <Flame className="w-3 h-3 text-orange-400 shrink-0" />
                   <span className="truncate">SPEED: {currentStep.approachHint.speed}</span>
                 </div>
+                {currentStep.approachHint.stealth !== 'N/A' && (
                 <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
                   <EyeOff className="w-3 h-3 text-emerald-400 shrink-0" />
                   <span className="truncate">STEALTH: {currentStep.approachHint.stealth}</span>
                 </div>
+                )}
                 <div className="flex items-center gap-1.5 text-cyan-300 font-bold">
                   <Sparkles className="w-3 h-3 text-cyan-400 shrink-0" />
                   <span className="truncate">SMARTS: {currentStep.approachHint.smarts}</span>
@@ -281,6 +284,44 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* ---------------- MIDDLE SECTION: ALERT & PROMPTS ---------------- */}
       <div className="flex flex-col items-center justify-center gap-3">
+        {/* Downtown checkpoint sprint */}
+        {state.racePhase !== 'idle' && (
+          <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
+            state.racePhase === 'failed'
+              ? 'border-red-500/70 shadow-red-950/50'
+              : state.racePhase === 'won'
+              ? 'border-emerald-400/70 shadow-emerald-950/40'
+              : 'border-amber-400/70 shadow-amber-950/50'
+          }`}>
+            <Timer className={`w-5 h-5 ${
+              state.racePhase === 'failed' ? 'text-red-400' : 'text-amber-300'
+            }`} />
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                {state.racePhase === 'countdown' && `Get ready  ${state.raceCountdownSec}`}
+                {state.racePhase === 'racing' && `Gate ${state.raceGateIndex + 1}/${state.raceGateTotal}`}
+                {state.racePhase === 'won' && 'Finished!'}
+                {state.racePhase === 'failed' && 'DNF — ride START to retry'}
+              </div>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className={`text-lg font-mono font-black ${
+                  state.racePhase === 'racing' && state.raceParSec - state.raceTimeSec < 8
+                    ? 'text-red-400'
+                    : 'text-white'
+                }`}>
+                  {state.racePhase === 'countdown'
+                    ? '0.0'
+                    : Math.min(state.raceTimeSec, state.raceParSec).toFixed(1)}s
+                </span>
+                <span className="text-[10px] font-bold text-slate-400">/ {state.raceParSec.toFixed(0)}s</span>
+                {state.raceBestTimeSec != null && (
+                  <span className="text-[10px] font-bold text-cyan-300">best {state.raceBestTimeSec.toFixed(2)}s</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* CHAOS Alert Meter */}
         {(state.chaosAlertLevel > 0 || state.chaosAlertProgress > 0) && (
           <div className={`bg-slate-900/90 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${

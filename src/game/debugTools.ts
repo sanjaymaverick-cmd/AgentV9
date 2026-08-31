@@ -22,6 +22,7 @@ export interface DebugTools {
   teleport(pos: [number, number, number]): void;
   jumpToMissionStep(index: number): void;
   setRenderQuality(level: 'low' | 'medium' | 'high'): void;
+  startDowntownRace(): void;
 }
 
 /** The engine members the debug tools reach into (public API + a few privates). */
@@ -55,6 +56,7 @@ interface Internals {
   setNotification(text: string): void;
   notifyState(): void;
   chaosAlertManager: { clear(): void; setLevel(level: number): void };
+  raceManager: { start(raceId?: string): void };
 }
 
 const ALL_DISGUISES: DisguiseType[] = [
@@ -172,6 +174,13 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
 
     setRenderQuality(level) {
       e.applyQuality(level);
+      e.notifyState();
+    },
+
+    startDowntownRace() {
+      teleport([16, 0, 4]);
+      e.raceManager.start();
+      e.setNotification('[debug] Downtown sprint armed');
       e.notifyState();
     },
   };

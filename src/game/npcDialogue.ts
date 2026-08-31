@@ -2,6 +2,7 @@ import type { GameEngine } from './gameEngine';
 import type { WorldObjects } from './world';
 import { soundEngine } from './audio';
 import { SIDE_MISSIONS } from './missionEngine';
+import { RACE } from './tunables';
 
 /**
  * NPC conversations and side-quest hand-off (spec §20). Picks the nearest talker,
@@ -64,6 +65,12 @@ export class NPCDialogue {
   startSideQuest(questId: string) {
     const e = this.e;
     this.closeNPCDialogue();
+    if (questId === RACE.downtownId) {
+      e.raceManager.start(questId);
+      e.requestAutosave();
+      e.notifyState();
+      return;
+    }
     const sideQuest = SIDE_MISSIONS.find((m) => m.id === questId);
     if (sideQuest) {
       e.state.activeMission = JSON.parse(JSON.stringify(sideQuest));

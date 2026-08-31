@@ -10,8 +10,10 @@ import {
   createBusStop,
   createStreetBench,
   createCrosswalkSignal,
-  createLocalNPCMesh
+  createLocalNPCMesh,
+  createRaceCheckpoint,
 } from './models';
+import { DOWNTOWN_RACE_GATES } from './tunables';
 import { SecurityBot, CollectibleItem, CityPOI, NPCLocal } from '../types/game';
 import {
   addNightSky,
@@ -63,6 +65,13 @@ export interface SecurityCameraObject {
   viewAngle: number;
 }
 
+export interface RaceCheckpointObject {
+  index: number;
+  position: [number, number, number];
+  group: THREE.Group;
+  ring: THREE.Mesh;
+}
+
 export interface UndergroundZone {
   minX: number;
   maxX: number;
@@ -81,6 +90,7 @@ export interface WorldObjects {
   cameras: SecurityCameraObject[];
   undergroundZone: UndergroundZone;
   stuntRings: { id: string; mesh: THREE.Mesh; position: [number, number, number]; collected: boolean }[];
+  raceCheckpoints: RaceCheckpointObject[];
   fuelStations: {
     id: string;
     name: string;
@@ -107,6 +117,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   const bots: WorldObjects['bots'] = [];
   const cameras: WorldObjects['cameras'] = [];
   const stuntRings: WorldObjects['stuntRings'] = [];
+  const raceCheckpoints: WorldObjects['raceCheckpoints'] = [];
   const fuelStations: WorldObjects['fuelStations'] = [];
   const trafficVehicles: TrafficVehicle[] = [];
   const npcLocals: NPCObject[] = [];
@@ -540,6 +551,18 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     ringMesh.position.set(...(pos as [number, number, number]));
     scene.add(ringMesh);
     stuntRings.push({ id: `ring_${i + 1}`, mesh: ringMesh, position: pos as [number, number, number], collected: false });
+  });
+
+  DOWNTOWN_RACE_GATES.forEach((pos, index) => {
+    const { group, ring } = createRaceCheckpoint(index);
+    group.position.set(pos[0], 0, pos[2]);
+    scene.add(group);
+    raceCheckpoints.push({
+      index,
+      position: [pos[0], pos[1], pos[2]],
+      group,
+      ring,
+    });
   });
 
   // ---------------------------------------------------
@@ -1091,6 +1114,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     cameras,
     undergroundZone,
     stuntRings,
+    raceCheckpoints,
     fuelStations,
     trafficVehicles,
     npcLocals,
