@@ -200,13 +200,13 @@ export default function App() {
           onSelectGadget={(g) => engineRef.current?.switchGadget(g)}
           onToggleSilent={() => engineRef.current?.toggleSilentOrCrouch()}
           onInteract={() => engineRef.current?.handleInteractAction()}
-          touchControlsActive={settings.touchControls}
+          touchControlsActive={settings.touchControls && !gameState.gamepadConnected}
         />
       )}
 
-      {/* On-Screen Touch Controls */}
-      {gameState && settings.touchControls && (
-        <TouchControls 
+      {/* On-Screen Touch Controls — auto-hidden while a gamepad is connected */}
+      {gameState && settings.touchControls && !gameState.gamepadConnected && (
+        <TouchControls
           engine={engineRef.current} 
           isRiding={gameState.isRiding} 
           settings={settings}

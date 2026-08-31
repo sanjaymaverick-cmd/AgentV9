@@ -41,6 +41,7 @@ import { RadarSync } from './radarSync';
 import { EngineInput } from './engineInput';
 import { PlayerActions } from './playerActions';
 import { NPCDialogue } from './npcDialogue';
+import { GamepadInput } from './gamepadInput';
 import { SaveController } from './saveController';
 
 export interface GameState {
@@ -82,6 +83,7 @@ export interface GameState {
   activeNPCDialogue: { npc: NPCLocal; lineIndex: number } | null;
   allCityPOIs: CityPOI[];
   allNPCs: NPCLocal[];
+  gamepadConnected: boolean;
 }
 
 /**
@@ -225,6 +227,7 @@ export class GameEngine {
   public playerActions!: PlayerActions;
   public npcDialogue!: NPCDialogue;
   public saveController!: SaveController;
+  public gamepadInput!: GamepadInput;
 
   constructor(
     container: HTMLElement,
@@ -284,6 +287,7 @@ export class GameEngine {
       activeNPCDialogue: null,
       allCityPOIs: [],
       allNPCs: [],
+      gamepadConnected: false,
     };
 
     // Three.js Scene, Camera, Renderer
@@ -299,6 +303,7 @@ export class GameEngine {
 
     this.initWorld();
     this.engineInput.attach();
+    this.gamepadInput.attach();
     this.cameraRig.attachPointerControls();
 
     if (savedGame) {
@@ -371,6 +376,7 @@ export class GameEngine {
     this.playerActions = new PlayerActions(this);
     this.npcDialogue = new NPCDialogue(this);
     this.saveController = new SaveController(this);
+    this.gamepadInput = new GamepadInput(this);
   }
 
   private initWaypointBeacon() {
@@ -485,6 +491,9 @@ export class GameEngine {
       this.stealthAI.updateEscortOut(dt);
       return;
     }
+
+    // 0. Poll gamepad into the shared input struct (before any consumer reads it).
+    this.gamepadInput.poll();
 
     // 1. Update Projectiles & Foam
     this.worldSystems.updateProjectiles(dt);
