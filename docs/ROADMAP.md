@@ -167,7 +167,7 @@ Spec §38, restated as a checklist to tick off:
 - [ ] A real chase works
 - [ ] The Midnight Prototype can be completed end to end
 - [ ] At least two of Speed / Stealth / Smarts genuinely work
-- [ ] Progress saves and reloads
+- [x] Progress saves and reloads <!-- A1: versioned SaveManager + migration -->
 - [ ] Runs acceptably on a mid-range phone
 - [ ] APK installs
 - [ ] Signed AAB can be produced
