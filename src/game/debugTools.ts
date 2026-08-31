@@ -15,6 +15,7 @@ import type { GameEngine } from './gameEngine';
 
 export interface DebugTools {
   clearChaos(): void;
+  setChaosLevel(level: number): void;
   refill(): void;
   unlockAllDisguises(): void;
   equipDisguise(d: DisguiseType): void;
@@ -53,6 +54,7 @@ interface Internals {
   requestAutosave(): void;
   setNotification(text: string): void;
   notifyState(): void;
+  chaosAlertManager: { clear(): void; setLevel(level: number): void };
 }
 
 const ALL_DISGUISES: DisguiseType[] = [
@@ -91,8 +93,7 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
 
   return {
     clearChaos() {
-      e.state.chaosAlertLevel = 0;
-      e.state.chaosAlertProgress = 0;
+      e.chaosAlertManager.clear();
       e.state.stealthVisibility = 0;
       e.world.bots.forEach((b) => {
         b.data.alertLevel = 0;
@@ -101,6 +102,12 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
       e.isEscortingOut = false;
       e.escortTimer = 0;
       e.setNotification('[debug] CHAOS alert cleared');
+      e.notifyState();
+    },
+
+    setChaosLevel(level: number) {
+      e.chaosAlertManager.setLevel(level);
+      e.setNotification(`[debug] CHAOS level ${level}`);
       e.notifyState();
     },
 

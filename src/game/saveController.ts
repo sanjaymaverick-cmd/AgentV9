@@ -136,6 +136,7 @@ export class SaveController {
 
     e.state.chaosAlertLevel = w.chaosAlertLevel;
     e.state.chaosAlertProgress = w.chaosAlertProgress;
+    e.chaosAlertManager.syncToState();
     e.state.fuelLevel = w.fuelLevel;
     e.state.nitroLevel = w.nitroLevel;
 

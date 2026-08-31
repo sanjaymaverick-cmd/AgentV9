@@ -235,8 +235,9 @@ export class PlayerActions {
       e.scene.add(empMesh);
       e.projectiles.push({ mesh: empMesh, vel: dir.clone().multiplyScalar(40), type: 'emp', life: 1.5 });
 
-      // Check immediate EMP disable in radius
+      // Check immediate EMP disable in radius (bots + CHAOS units + cameras)
       e.stealthAI.applyEMPRadius(origin, 12);
+      e.chaosAlertManager.applyEMPRadius(origin, 12);
     } else if (e.state.currentGadget === 'foam') {
       soundEngine.playFoam();
       e.setNotification('Foam Blaster Fired! (Traps bots & blocks doors)');
@@ -254,8 +255,10 @@ export class PlayerActions {
 
   equipDisguise(disguise: DisguiseType) {
     const e = this.e;
+    const previous = e.state.currentDisguise;
     e.state.currentDisguise = disguise;
     e.updateCustomization(e.customization);
+    if (previous !== disguise) e.chaosAlertManager.reportDisguiseChange(disguise);
     const disguiseNames: Record<DisguiseType, string> = {
       agent_suit: 'Agent Stealth Suit',
       delivery_worker: 'Velocity Courier Uniform',
@@ -286,8 +289,7 @@ export class PlayerActions {
       e.checkMissionStepComplete('step_4_infiltrate_station', 'smarts');
     } else {
       e.setNotification('Plaza Hologram Node activated! CHAOS alerts cleared.');
-      e.state.chaosAlertLevel = 0;
-      e.state.chaosAlertProgress = 0;
+      e.chaosAlertManager.clear();
     }
     e.requestAutosave();
     e.notifyState();

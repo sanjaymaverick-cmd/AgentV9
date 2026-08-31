@@ -19,6 +19,10 @@ export interface QualityPreset {
   pedestrianCount: number;
   maxDriftParticles: number;
   maxRefuelParticles: number;
+  /** CHAOS L3 interceptor drones kept visible (ChaosAlertManager trims the rest). */
+  chaosInterceptorCount: number;
+  /** CHAOS L4 roadblocks kept visible. */
+  chaosRoadblockCount: number;
 }
 
 export const QUALITY_PRESETS: Record<QualityLevel, QualityPreset> = {
@@ -32,6 +36,8 @@ export const QUALITY_PRESETS: Record<QualityLevel, QualityPreset> = {
     pedestrianCount: 2,
     maxDriftParticles: 20,
     maxRefuelParticles: 12,
+    chaosInterceptorCount: 1,
+    chaosRoadblockCount: 2,
   },
   medium: {
     pixelRatioCap: 1.5,
@@ -43,6 +49,8 @@ export const QUALITY_PRESETS: Record<QualityLevel, QualityPreset> = {
     pedestrianCount: 4,
     maxDriftParticles: 40,
     maxRefuelParticles: 25,
+    chaosInterceptorCount: 2,
+    chaosRoadblockCount: 3,
   },
   high: {
     pixelRatioCap: 2,
@@ -54,6 +62,8 @@ export const QUALITY_PRESETS: Record<QualityLevel, QualityPreset> = {
     pedestrianCount: 4,
     maxDriftParticles: 80,
     maxRefuelParticles: 40,
+    chaosInterceptorCount: 3,
+    chaosRoadblockCount: 3,
   },
 };
 

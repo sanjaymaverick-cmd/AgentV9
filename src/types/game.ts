@@ -159,7 +159,7 @@ export interface GameSettings {
 
 export interface RadarEntity {
   id: string;
-  type: 'player' | 'bike' | 'drone' | 'traffic' | 'bot' | 'camera' | 'fuel' | 'terminal' | 'locker' | 'collectible' | 'objective' | 'npc' | 'poi';
+  type: 'player' | 'bike' | 'drone' | 'traffic' | 'bot' | 'camera' | 'fuel' | 'terminal' | 'locker' | 'collectible' | 'objective' | 'npc' | 'poi' | 'chaos';
   x: number;
   z: number;
   rot?: number;

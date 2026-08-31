@@ -44,6 +44,7 @@ import { PlayerActions } from './playerActions';
 import { NPCDialogue } from './npcDialogue';
 import { GamepadInput } from './gamepadInput';
 import { SaveController } from './saveController';
+import { ChaosAlertManager } from './chaosAlertManager';
 import { QualityPreset, QUALITY_PRESETS } from './quality';
 
 export interface GameState {
@@ -68,7 +69,8 @@ export interface GameState {
   stealthVisibility: number; // 0 to 100
   stealthNoise: number; // 0 to 100
   chaosAlertLevel: number; // 0 to 5
-  chaosAlertProgress: number; // 0 to 100
+  chaosAlertProgress: number; // 0 to 100 toward the next level
+  chaosPhase: 'idle' | 'escalating' | 'cooling';
   nearInteraction: string | null;
   activeMission: Mission;
   stats: PlayerStats;
@@ -235,6 +237,7 @@ export class GameEngine {
   public npcDialogue!: NPCDialogue;
   public saveController!: SaveController;
   public gamepadInput!: GamepadInput;
+  public chaosAlertManager!: ChaosAlertManager;
 
   constructor(
     container: HTMLElement,
@@ -274,6 +277,7 @@ export class GameEngine {
       stealthNoise: 20,
       chaosAlertLevel: 0,
       chaosAlertProgress: 0,
+      chaosPhase: 'idle',
       nearInteraction: null,
       activeMission: JSON.parse(JSON.stringify(STORY_MISSION_MIDNIGHT_PROTOTYPE)),
       stats: initialStats,
@@ -385,6 +389,7 @@ export class GameEngine {
     this.npcDialogue = new NPCDialogue(this);
     this.saveController = new SaveController(this);
     this.gamepadInput = new GamepadInput(this);
+    this.chaosAlertManager = new ChaosAlertManager(this);
   }
 
   private initWaypointBeacon() {
@@ -488,6 +493,8 @@ export class GameEngine {
       if (n.isPedestrian) n.obj.visible = peds++ < q.pedestrianCount;
     });
 
+    this.chaosAlertManager.applyQualityTrim();
+
     if (notify) this.setNotification(`Graphics: ${level.toUpperCase()}`);
   }
 
@@ -562,6 +569,9 @@ export class GameEngine {
 
     // 4. Update Stealth & Security Bots
     this.stealthAI.update(dt);
+
+    // 4b. City-wide CHAOS heat (reads sightings reported this frame by stealth + cameras)
+    this.chaosAlertManager.update(dt);
 
     // 5. Update World Collectibles & Stunt Rings
     this.worldSystems.updateWorldInteractions(dt);

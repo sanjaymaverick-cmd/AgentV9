@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { GameState } from '../game/gameEngine';
 import { soundEngine } from '../game/audio';
+import { CHAOS } from '../game/tunables';
 import { MiniMap } from './MiniMap';
 import * as THREE from 'three';
 
@@ -281,16 +282,27 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ---------------- MIDDLE SECTION: ALERT & PROMPTS ---------------- */}
       <div className="flex flex-col items-center justify-center gap-3">
         {/* CHAOS Alert Meter */}
-        {state.chaosAlertProgress > 0 && (
-          <div className="bg-slate-900/90 border border-red-500/60 rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg shadow-red-950/60 animate-pulse">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
+        {(state.chaosAlertLevel > 0 || state.chaosAlertProgress > 0) && (
+          <div className={`bg-slate-900/90 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
+            state.chaosPhase === 'cooling'
+              ? 'border-amber-400/50 shadow-amber-950/40'
+              : 'border-red-500/60 shadow-red-950/60 animate-pulse'
+          }`}>
+            <AlertTriangle className={`w-5 h-5 ${state.chaosPhase === 'cooling' ? 'text-amber-300' : 'text-red-400'}`} />
             <div>
-              <div className="text-[11px] font-black text-red-400 uppercase tracking-wider flex items-center gap-2">
-                CHAOS Suspicion Alert (Lvl {state.chaosAlertLevel})
+              <div className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-2 ${
+                state.chaosPhase === 'cooling' ? 'text-amber-300' : 'text-red-400'
+              }`}>
+                CHAOS {CHAOS.levelNames[state.chaosAlertLevel] ?? 'Alert'} (Lvl {state.chaosAlertLevel})
+                {state.chaosPhase === 'cooling' && (
+                  <span className="text-[9px] font-bold text-amber-200/80 normal-case tracking-normal">cooling</span>
+                )}
               </div>
               <div className="w-44 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
                 <div 
-                  className="h-full bg-red-500 rounded-full transition-all"
+                  className={`h-full rounded-full transition-all ${
+                    state.chaosPhase === 'cooling' ? 'bg-amber-400' : 'bg-red-500'
+                  }`}
                   style={{ width: `${state.chaosAlertProgress}%` }}
                 />
               </div>

@@ -163,6 +163,9 @@ export class RadarSync {
       });
     }
 
+    // 12. Live CHAOS pursuit units (search drone, interceptors, tracker, elite, roadblocks)
+    e.chaosAlertManager.collectRadar(entities);
+
     e.state.radarEntities = entities;
   }
 }

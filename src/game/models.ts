@@ -1040,6 +1040,176 @@ export function createChaosGuardBot(name: string): {
 }
 
 // ----------------------------------------------------
+// SECURITY CAMERA (sweeping cone — ChaosAlertManager / spec §12)
+// ----------------------------------------------------
+export function createSecurityCamera(id: string): { group: THREE.Group; coneMesh: THREE.Mesh } {
+  const group = new THREE.Group();
+  group.name = `CHAOS_Cam_${id}`;
+
+  const steel = new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.75, roughness: 0.3 });
+  const dark = new THREE.MeshStandardMaterial({ color: '#0f172a', metalness: 0.6, roughness: 0.4 });
+  const lensMat = new THREE.MeshBasicMaterial({ color: '#ef4444' });
+
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.4, 8), steel);
+  pole.position.y = -2.1;
+  group.add(pole);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.42), dark);
+  group.add(head);
+
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.12, 10), lensMat);
+  lens.rotation.x = Math.PI / 2;
+  lens.position.z = 0.24;
+  group.add(lens);
+
+  const coneGeo = new THREE.ConeGeometry(4.2, 11, 16, 1, true);
+  coneGeo.rotateX(-Math.PI / 2);
+  coneGeo.translate(0, 0, 5.5);
+  const coneMesh = new THREE.Mesh(
+    coneGeo,
+    new THREE.MeshBasicMaterial({
+      color: '#f59e0b',
+      transparent: true,
+      opacity: 0.14,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  group.add(coneMesh);
+
+  return { group, coneMesh };
+}
+
+// ----------------------------------------------------
+// CHAOS PURSUIT DRONE (search / interceptor)
+// ----------------------------------------------------
+export function createChaosPursuitDrone(kind: 'search' | 'interceptor'): {
+  group: THREE.Group;
+  rotors: THREE.Mesh[];
+  coneMesh: THREE.Mesh;
+} {
+  const group = new THREE.Group();
+  group.name = kind === 'search' ? 'CHAOS_SearchDrone' : 'CHAOS_Interceptor';
+
+  const accent = kind === 'search' ? '#f97316' : '#ef4444';
+  const bodyMat = new THREE.MeshStandardMaterial({ color: '#1e293b', metalness: 0.75, roughness: 0.28 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: '#09090b', metalness: 0.5 });
+  const glowMat = new THREE.MeshBasicMaterial({ color: accent });
+
+  const scale = kind === 'search' ? 1.15 : 1.35;
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.16, 8), bodyMat);
+  group.add(core);
+
+  const armGeo = new THREE.BoxGeometry(0.72, 0.03, 0.045);
+  const arm1 = new THREE.Mesh(armGeo, darkMat);
+  const arm2 = new THREE.Mesh(armGeo, darkMat);
+  arm2.rotation.y = Math.PI / 2;
+  group.add(arm1, arm2);
+
+  const rotors: THREE.Mesh[] = [];
+  const rotorGeo = new THREE.BoxGeometry(0.28, 0.012, 0.035);
+  const motorGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.07, 8);
+  (
+    [
+      [0.34, 0],
+      [-0.34, 0],
+      [0, 0.34],
+      [0, -0.34],
+    ] as [number, number][]
+  ).forEach(([x, z]) => {
+    const motor = new THREE.Mesh(motorGeo, darkMat);
+    motor.position.set(x, 0.05, z);
+    group.add(motor);
+    const blade = new THREE.Mesh(rotorGeo, glowMat);
+    blade.position.set(x, 0.09, z);
+    group.add(blade);
+    rotors.push(blade);
+  });
+
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), glowMat);
+  eye.position.set(0, -0.08, 0.18);
+  group.add(eye);
+
+  const coneGeo = new THREE.ConeGeometry(kind === 'search' ? 5 : 4, kind === 'search' ? 12 : 9, 16, 1, true);
+  coneGeo.rotateX(Math.PI / 2);
+  coneGeo.translate(0, 0, kind === 'search' ? 6 : 4.5);
+  const coneMesh = new THREE.Mesh(
+    coneGeo,
+    new THREE.MeshBasicMaterial({
+      color: accent,
+      transparent: true,
+      opacity: 0.16,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  // Search drone scans downward; interceptors look forward.
+  if (kind === 'search') coneMesh.rotation.x = Math.PI / 2.6;
+  group.add(coneMesh);
+
+  group.scale.setScalar(scale);
+  return { group, rotors, coneMesh };
+}
+
+export function createChaosTracker(): { group: THREE.Group; pulse: THREE.Mesh } {
+  const group = new THREE.Group();
+  group.name = 'CHAOS_Tracker';
+  const glow = new THREE.MeshBasicMaterial({ color: '#f43f5e' });
+  const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.32, 0), glow);
+  group.add(core);
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.55, 0.04, 6, 18),
+    new THREE.MeshBasicMaterial({ color: '#fb7185', transparent: true, opacity: 0.8 })
+  );
+  ring.rotation.x = Math.PI / 2;
+  group.add(ring);
+  return { group, pulse: ring };
+}
+
+export function createChaosRoadblock(): { group: THREE.Group } {
+  const group = new THREE.Group();
+  group.name = 'CHAOS_Roadblock';
+  const stripe = new THREE.MeshStandardMaterial({ color: '#eab308', metalness: 0.4, roughness: 0.45 });
+  const dark = new THREE.MeshStandardMaterial({ color: '#111827', metalness: 0.5, roughness: 0.4 });
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(5.4, 1.15, 0.7), stripe);
+  bar.position.y = 0.7;
+  group.add(bar);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.28, 1.1), dark);
+  base.position.y = 0.14;
+  group.add(base);
+  const postGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.6, 6);
+  const p1 = new THREE.Mesh(postGeo, dark);
+  p1.position.set(-2.4, 0.8, 0);
+  const p2 = new THREE.Mesh(postGeo, dark);
+  p2.position.set(2.4, 0.8, 0);
+  group.add(p1, p2);
+  const cone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.28, 0.7, 8),
+    new THREE.MeshBasicMaterial({ color: '#f97316' })
+  );
+  cone.position.set(-2.9, 0.4, 0.7);
+  group.add(cone);
+  return { group };
+}
+
+export function createElitePursuitRobot(name: string): {
+  group: THREE.Group;
+  coneMesh: THREE.Mesh;
+} {
+  const { group, coneMesh } = createChaosGuardBot(name);
+  group.name = `CHAOS_Elite_${name}`;
+  group.scale.setScalar(1.65);
+  // Taller chassis cue — a second red "crown" light.
+  const crown = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 8, 8),
+    new THREE.MeshBasicMaterial({ color: '#f43f5e' })
+  );
+  crown.position.set(0, 1.15, 0);
+  group.add(crown);
+  return { group, coneMesh };
+}
+
+// ----------------------------------------------------
 // GIANT CHAOS CARGO DRONE (BOSS CLIMAX)
 // ----------------------------------------------------
 export function createGiantCargoDrone(): {

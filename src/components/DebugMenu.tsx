@@ -184,6 +184,20 @@ export default function DebugMenu({ engine, state, onClose }: DebugMenuProps) {
               Clear CHAOS
             </button>
           </div>
+          <div className="grid grid-cols-6 gap-1">
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                onClick={() => dbg?.setChaosLevel(n)}
+                className={`${btn} ${state.chaosAlertLevel === n ? '!bg-red-500 !text-white' : ''}`}
+              >
+                L{n}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-500">
+            Heat {state.chaosAlertProgress}% · {state.chaosPhase}
+          </p>
         </section>
 
         {/* Disguises */}

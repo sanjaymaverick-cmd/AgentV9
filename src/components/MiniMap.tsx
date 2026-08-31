@@ -386,6 +386,25 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             );
           }
 
+          // 6b. CHAOS pursuit units (search / interceptors / tracker / elite / roadblocks)
+          if (entity.type === 'chaos') {
+            const hot = (entity.alert || 0) > 0.6;
+            return (
+              <div
+                key={entity.id}
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-16 pointer-events-none"
+                style={{ left: screenX, top: screenY }}
+                title={entity.label}
+              >
+                <div
+                  className={`w-2.5 h-2.5 rotate-45 border border-white shadow-md ${
+                    hot ? 'bg-red-500 animate-pulse' : 'bg-orange-400'
+                  }`}
+                />
+              </div>
+            );
+          }
+
           // 7. Security Cameras
           if (entity.type === 'camera') {
             return (

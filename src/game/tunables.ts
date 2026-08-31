@@ -74,11 +74,81 @@ export const STEALTH = {
   relayHitDist: 14,
   relayXP: 250,
 
-  chaosProgressThreshold: 75, // % that trips CHAOS level 2 today
-  chaosTrippedLevel: 2,
-
   escortDurationSec: 3.5,
   escortLerpPerSec: 3,
+} as const;
+
+/**
+ * City-wide CHAOS heat (spec §17). Owned by ChaosAlertManager — StealthAI no longer
+ * writes chaosAlertLevel. Progress is 0–100 toward the next level, not a bot clone.
+ */
+export const CHAOS = {
+  maxLevel: 5,
+
+  /** ~10 s of being watched climbs L0 → L1. */
+  sightRisePerSec: 10,
+  progressAfterLevelUp: 18,
+  progressAfterLevelDown: 72,
+  caughtProgressBump: 35,
+
+  naturalDecayPerSec: 4,
+  hideWarmupSec: 3.5,
+  hideDecayPerSec: 12,
+  escapeRadius: 60,
+  escapeDecayPerSec: 18,
+  safeCenter: [-70, 0, -48] as [number, number, number],
+  safeRadius: 22,
+  safeWarmupSec: 2,
+  safeDecayPerSec: 28,
+  undergroundDecayPerSec: 18,
+  disguiseCooldownSec: 15,
+  disguiseProgressDrop: 50,
+  agentSuitProgressDrop: 12,
+  trackerEmpLevelDrop: 1,
+
+  cameraViewDistance: 14,
+  cameraViewAngle: 50,
+  cameraSweepAmp: 0.7, // radians
+  cameraSweepSpeed: 0.55,
+  cameraEnhanceRangeMult: 1.6,
+  cameraEnhanceSweepMult: 2.2,
+  cameraEnhanceConeOpacity: 0.42,
+
+  searchOrbitRadius: 12,
+  searchOrbitHeight: 11,
+  searchOrbitSpeed: 0.55,
+  searchViewDistance: 20,
+  searchViewAngle: 42,
+
+  interceptorSpeed: 20, // m/s — below V9 cruise (28) and boost (45)
+  interceptorHeight: 8,
+  interceptorStandoff: 10,
+  interceptorViewDistance: 16,
+
+  trackerFollowLerp: 2.4,
+  trackerHeight: 5.2,
+
+  eliteSpeed: 12,
+  eliteCatchDist: 2.4,
+  eliteScale: 1.65,
+
+  roadblockBumpMaxSpeed: 5,
+  roadblockSlots: [
+    { position: [10, 0, -30] as [number, number, number], yaw: 0 },
+    { position: [70, 0, 10] as [number, number, number], yaw: Math.PI / 2 },
+    { position: [-10, 0, 30] as [number, number, number], yaw: 0 },
+  ],
+
+  empDisableMs: 9000,
+
+  levelNames: [
+    'Clear',
+    'Search Drone',
+    'Enhanced Cameras',
+    'Interceptors',
+    'Roadblocks',
+    'Elite Pursuit',
+  ] as const,
 } as const;
 
 /** Chase / action / FPV / tactical camera feel — see CameraRig. */

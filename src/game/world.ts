@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { 
   createAsphaltTexture, 
-  createChaosGuardBot, 
+  createChaosGuardBot,
+  createSecurityCamera,
   createCyberFuelStation, 
   createCyberTrafficCar,
   createStreetLight,
@@ -40,6 +41,26 @@ export interface NPCObject {
   patrolProgress?: number;
 }
 
+export interface SecurityCameraObject {
+  id: string;
+  obj: THREE.Group;
+  cone: THREE.Mesh;
+  sweepAngle: number;
+  sweepCenter: number;
+  position: [number, number, number];
+  disabled: boolean;
+  disabledUntil: number;
+  viewDistance: number;
+  viewAngle: number;
+}
+
+export interface UndergroundZone {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
 export interface WorldObjects {
   scene: THREE.Scene;
   colliders: THREE.Box3[];
@@ -48,7 +69,8 @@ export interface WorldObjects {
   lockers: { id: string; disguise: string; position: [number, number, number]; mesh: THREE.Mesh }[];
   collectibles: CollectibleItem[];
   bots: { data: SecurityBot; obj: THREE.Group; cone: THREE.Mesh }[];
-  cameras: { id: string; obj: THREE.Group; cone: THREE.Mesh; sweepAngle: number; position: [number, number, number]; disabled: boolean }[];
+  cameras: SecurityCameraObject[];
+  undergroundZone: UndergroundZone;
   stuntRings: { id: string; mesh: THREE.Mesh; position: [number, number, number]; collected: boolean }[];
   fuelStations: {
     id: string;
@@ -620,6 +642,61 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     bots.push({ data: bData, obj: botGroup, cone: coneMesh });
   });
 
+  // Sweeping security cameras (spec §12). L2 CHAOS enhances range/sweep — see ChaosAlertManager.
+  // TODO(C4): move camera perception into StealthAI with the named AI states.
+  const cameraDefs: { id: string; pos: [number, number, number]; yaw: number; sweep: number }[] = [
+    { id: 'cam_museum_front', pos: [8, 4.6, -68], yaw: Math.PI, sweep: 0.85 },
+    { id: 'cam_museum_dock', pos: [7, 4.2, -99], yaw: 0, sweep: 0.7 },
+    { id: 'cam_station', pos: [78, 5.2, 12], yaw: Math.PI / 2, sweep: 0.75 },
+    { id: 'cam_plaza', pos: [14, 5.0, 10], yaw: -2.3, sweep: 0.9 },
+  ];
+  cameraDefs.forEach((def) => {
+    const { group, coneMesh } = createSecurityCamera(def.id);
+    group.position.set(...def.pos);
+    group.rotation.y = def.yaw;
+    scene.add(group);
+    cameras.push({
+      id: def.id,
+      obj: group,
+      cone: coneMesh,
+      sweepAngle: def.sweep,
+      sweepCenter: def.yaw,
+      position: def.pos,
+      disabled: false,
+      disabledUntil: 0,
+      viewDistance: 14,
+      viewAngle: 50,
+    });
+  });
+
+  // Covered service underpass — street-level (physics stays at y=0) decay route (spec §17).
+  const tunnelMat = new THREE.MeshStandardMaterial({ color: '#111827', metalness: 0.45, roughness: 0.65 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: '#1e293b', metalness: 0.5, roughness: 0.5 });
+  const tunnelFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(26, 0.08, 10),
+    new THREE.MeshStandardMaterial({ color: '#0b1220', roughness: 0.92 })
+  );
+  tunnelFloor.position.set(45, 0.06, -17);
+  scene.add(tunnelFloor);
+  const wallN = new THREE.Mesh(new THREE.BoxGeometry(26, 4.2, 0.55), wallMat);
+  wallN.position.set(45, 2.1, -22);
+  scene.add(wallN);
+  colliders.push(new THREE.Box3().setFromObject(wallN));
+  const wallS = new THREE.Mesh(new THREE.BoxGeometry(26, 4.2, 0.55), wallMat);
+  wallS.position.set(45, 2.1, -12);
+  scene.add(wallS);
+  colliders.push(new THREE.Box3().setFromObject(wallS));
+  const tunnelRoof = new THREE.Mesh(new THREE.BoxGeometry(26.4, 0.45, 10.8), tunnelMat);
+  tunnelRoof.position.set(45, 4.35, -17);
+  scene.add(tunnelRoof);
+  const guideStrip = new THREE.Mesh(
+    new THREE.BoxGeometry(26, 0.05, 0.28),
+    new THREE.MeshBasicMaterial({ color: '#f59e0b' })
+  );
+  guideStrip.position.set(45, 0.1, -17);
+  scene.add(guideStrip);
+  const undergroundZone: UndergroundZone = { minX: 32, maxX: 58, minZ: -22, maxZ: -12 };
+
   // ---------------------------------------------------
   // 10. CYBER FUEL & PLASMA FAST-CHARGE STATIONS
   // ---------------------------------------------------
@@ -989,6 +1066,15 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       iconType: 'target',
       district: 'North Boulevard',
     },
+    {
+      id: 'poi_tunnel',
+      name: 'Service Underpass',
+      category: 'secret',
+      position: [45, 1, -17],
+      description: 'Covered service tunnel. Ride through to shake CHAOS scanners.',
+      iconType: 'lock',
+      district: 'Downtown Core',
+    },
   ];
 
   return {
@@ -1000,6 +1086,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     collectibles,
     bots,
     cameras,
+    undergroundZone,
     stuntRings,
     fuelStations,
     trafficVehicles,

@@ -7,11 +7,13 @@ import { STEALTH } from './tunables';
 /**
  * Stealth detection & non-lethal enforcement (spec §11, §16).
  *
- * Per frame: moves patrols, runs vision-cone detection with disguise exemptions, drives
- * the CHAOS meter, and — on full alert — hands off to the humorous escort-out. Also owns
- * the EMP radius resolution and the hologram decoy, both fired from `engine.fireGadget()`.
+ * Per frame: moves patrols, runs vision-cone detection with disguise exemptions, and —
+ * on full alert — hands off to the humorous escort-out. City-wide CHAOS heat is owned
+ * by ChaosAlertManager; this class only reports sightings and catches.
  *
- * Moved verbatim from GameEngine (`this.` -> `this.e.`, magic numbers -> `STEALTH.*`).
+ * Also owns the EMP radius resolution (bots + boss relays) and the hologram decoy,
+ * both fired from `engine.fireGadget()`.
+ *
  * TODO(spec §11): this is still a single `alertLevel` float, not the five named states.
  */
 export class StealthAI {
@@ -63,6 +65,7 @@ export class StealthAI {
           bot.data.alertLevel = Math.min(1, bot.data.alertLevel + dt * STEALTH.alertRisePerSec);
           (bot.cone.material as THREE.MeshBasicMaterial).color.set('#ef4444');
           (bot.cone.material as THREE.MeshBasicMaterial).opacity = 0.45;
+          e.chaosAlertManager.reportSighting(1);
 
           if (bot.data.alertLevel >= 1 && !e.isEscortingOut) {
             this.triggerEscortOut(bot.data.name);
@@ -75,14 +78,8 @@ export class StealthAI {
       }
     });
 
-    // Update Overall CHAOS Alert level
     const maxBotAlert = Math.max(0, ...e.world.bots.map((b) => b.data.alertLevel));
     e.state.stealthVisibility = Math.round(maxBotAlert * 100);
-    e.state.chaosAlertProgress = Math.round(maxBotAlert * 100);
-    if (e.state.chaosAlertProgress > STEALTH.chaosProgressThreshold && e.state.chaosAlertLevel < STEALTH.chaosTrippedLevel) {
-      e.state.chaosAlertLevel = STEALTH.chaosTrippedLevel;
-      e.requestAutosave();
-    }
   }
 
   triggerEscortOut(guardName: string) {
@@ -97,6 +94,7 @@ export class StealthAI {
       text: 'Hey! Unauthorized personnel must stay outside the loading perimeter. Try putting on a technician disguise or finding another way in!',
       time: Date.now(),
     };
+    e.chaosAlertManager.reportCaught();
     e.notifyState();
   }
 
