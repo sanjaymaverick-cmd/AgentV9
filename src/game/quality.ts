@@ -90,3 +90,17 @@ export function autoDetectQuality(): QualityLevel {
   if (score >= 2) return 'medium';
   return 'low';
 }
+
+/**
+ * SwiftShader / llvmpipe / similar software GL fail to compile Three's shadow
+ * MeshDepthMaterial (VALIDATE_STATUS false) and then poison later programs with
+ * error 1282. Skip shadow maps on those renderers.
+ */
+export function isSoftwareWebGL(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
+  const debug = gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = debug
+    ? String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) ?? '')
+    : String(gl.getParameter(gl.RENDERER) ?? '');
+  const s = renderer.toLowerCase();
+  return s.includes('swiftshader') || s.includes('llvmpipe') || s.includes('software');
+}

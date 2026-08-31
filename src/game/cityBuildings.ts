@@ -137,7 +137,6 @@ export function createNightSkyTexture(): THREE.CanvasTexture {
     ctx.fillRect(x, y, rng() > 0.85 ? 2 : 1, 1);
   }
   skyTex = toTexture(ctx, false);
-  skyTex.mapping = THREE.EquirectangularReflectionMapping;
   return skyTex;
 }
 
@@ -732,10 +731,31 @@ export function createCargoStation(): THREE.Group {
   return group;
 }
 
-export function addNightSky(scene: THREE.Scene): void {
-  // Equirect sky as scene.background — survives quality draw-distance changes
-  // (a sky sphere would clip on LOW where camera.far is 320).
-  scene.background = createNightSkyTexture();
+export function addNightSky(scene: THREE.Scene, cameraFar = 800): THREE.Mesh {
+  // Sky dome (not EquirectangularReflectionMapping). That mapping compiles
+  // CubemapFromEquirect, which fails to validate on SwiftShader / some WebViews
+  // and then poisons every later shader with GL error 1282.
+  scene.background = new THREE.Color('#0b1a3a');
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 32, 16),
+    new THREE.MeshBasicMaterial({
+      map: createNightSkyTexture(),
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+    }),
+  );
+  mesh.name = 'night_sky';
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -1;
+  resizeNightSky(mesh, cameraFar);
+  scene.add(mesh);
+  return mesh;
+}
+
+/** Keep the dome just inside the camera far plane so LOW draw-distance never clips it. */
+export function resizeNightSky(mesh: THREE.Mesh, cameraFar: number): void {
+  mesh.scale.setScalar(Math.max(80, cameraFar * 0.92));
 }
 
 /** Explicit AABB matching the original landmark / tower footprints. */

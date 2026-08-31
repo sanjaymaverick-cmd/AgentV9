@@ -114,6 +114,7 @@ export interface WorldObjects {
   interiorColliders: THREE.Box3[];
   stationCraneGate: THREE.Mesh;
   sunLight: THREE.DirectionalLight; // exposed so quality presets can retune shadows
+  nightSky: THREE.Mesh;
 }
 
 export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
@@ -136,7 +137,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   // 1. SKY, FOG & AMBIENT LIGHTING
   // ---------------------------------------------------
   scene.fog = new THREE.FogExp2('#121826', 0.0042);
-  addNightSky(scene);
+  const nightSky = addNightSky(scene);
 
   const hemiLight = new THREE.HemisphereLight('#c5d4e8', '#1a1524', 0.72);
   scene.add(hemiLight);
@@ -1202,6 +1203,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     interiorColliders,
     stationCraneGate: craneGate,
     sunLight,
+    nightSky,
   };
 }
 

@@ -22,6 +22,7 @@ import {
   createGiantCargoDrone 
 } from './models';
 import { buildVelocityCity, WorldObjects } from './world';
+import { resizeNightSky } from './cityBuildings';
 import { soundEngine } from './audio';
 import { STORY_MISSION_MIDNIGHT_PROTOTYPE, SIDE_MISSIONS, calculateRank } from './missionEngine';
 import {
@@ -47,7 +48,7 @@ import { SaveController } from './saveController';
 import { ChaosAlertManager } from './chaosAlertManager';
 import { RaceManager, RacePhase } from './raceManager';
 import { ChaseController, ChasePhase } from './chaseController';
-import { QualityPreset, QUALITY_PRESETS } from './quality';
+import { QualityPreset, QUALITY_PRESETS, isSoftwareWebGL } from './quality';
 import { MeshPool, PARTICLE_GEO } from './objectPool';
 
 export interface GameState {
@@ -344,19 +345,21 @@ export class GameEngine {
 
     // Three.js Scene, Camera, Renderer
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(65, container.clientWidth / container.clientHeight, 0.1, 800);
-    
+    const viewW = Math.max(1, container.clientWidth || 1280);
+    const viewH = Math.max(1, container.clientHeight || 720);
+    this.camera = new THREE.PerspectiveCamera(65, viewW / viewH, 0.1, 800);
+
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
       // Dev-only: lets canvas.toDataURL capture a frame. Production keeps the default (false).
       preserveDrawingBuffer: !!import.meta.env.DEV,
     });
-    this.renderer.setSize(Math.max(1, container.clientWidth || 1280), Math.max(1, container.clientHeight || 720));
+    this.renderer.setSize(viewW, viewH);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.18;
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = false;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
 
@@ -527,12 +530,13 @@ export class GameEngine {
     this.maxRefuelParticles = q.maxRefuelParticles;
 
     // Renderer
+    const shadows = q.shadows && !isSoftwareWebGL(this.renderer.getContext());
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatioCap));
-    this.renderer.shadowMap.enabled = q.shadows;
+    this.renderer.shadowMap.enabled = shadows;
 
     // Shadows — force the shadow map to rebuild at the new resolution.
     const sun = this.world.sunLight;
-    sun.castShadow = q.shadows;
+    sun.castShadow = shadows;
     sun.shadow.mapSize.set(q.shadowMapSize, q.shadowMapSize);
     sun.shadow.map?.dispose();
     sun.shadow.map = null;
@@ -540,6 +544,7 @@ export class GameEngine {
     // Draw distance + fog
     this.camera.far = q.drawDistance;
     this.camera.updateProjectionMatrix();
+    resizeNightSky(this.world.nightSky, q.drawDistance);
     if (this.scene.fog instanceof THREE.FogExp2) {
       this.scene.fog.density = q.fogDensity;
     }
