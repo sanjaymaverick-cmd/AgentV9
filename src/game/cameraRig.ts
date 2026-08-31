@@ -13,6 +13,8 @@ import { CAMERA } from './tunables';
  * when the followed subject is actually moving.
  */
 export class CameraRig {
+  private readonly targetPos = new THREE.Vector3();
+
   constructor(private e: GameEngine) {}
 
   /** Drag / swipe on the canvas (not on UI) to look around. */
@@ -162,7 +164,7 @@ export class CameraRig {
       vibY = (Math.random() - 0.5) * 0.04;
     }
 
-    const targetPos = new THREE.Vector3(targetCamX + vibX, targetCamY + vibY, targetCamZ);
+    const targetPos = this.targetPos.set(targetCamX + vibX, targetCamY + vibY, targetCamZ);
     const lerpSpeed = e.isPointerDragging
       ? CAMERA.posLerpLook
       : mode === 'fpv'

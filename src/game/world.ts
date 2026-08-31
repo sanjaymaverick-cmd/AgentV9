@@ -131,6 +131,8 @@ export interface WorldObjects {
   sideBreakers: SideBreakerObject[];
   sunLight: THREE.DirectionalLight; // exposed so quality presets can retune shadows
   nightSky: THREE.Mesh;
+  /** Reused by gatherCollisionBoxes — do not persist across frames as source of truth. */
+  collisionScratch: THREE.Box3[];
 }
 
 export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
@@ -1261,6 +1263,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     sideBreakers,
     sunLight,
     nightSky,
+    collisionScratch: [],
   };
 }
 
@@ -1302,7 +1305,13 @@ function createSideBreaker(id: string, pos: [number, number, number]): SideBreak
 
 /** City footprints + museum walls + currently-closed gates. */
 export function gatherCollisionBoxes(world: WorldObjects, extra: THREE.Box3[] = []): THREE.Box3[] {
-  const boxes = world.colliders.concat(world.interiorColliders, extra);
+  const boxes = world.collisionScratch;
+  boxes.length = 0;
+  const a = world.colliders;
+  for (let i = 0; i < a.length; i++) boxes.push(a[i]);
+  const b = world.interiorColliders;
+  for (let i = 0; i < b.length; i++) boxes.push(b[i]);
+  for (let i = 0; i < extra.length; i++) boxes.push(extra[i]);
   if (world.museumLaserGate.visible) boxes.push(world.museumLaserBox);
   if (!world.museumStaffDoor.open) boxes.push(world.museumStaffDoor.box);
   // Closed crane gate (hack raises the mesh to y ≥ 8).

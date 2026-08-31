@@ -171,3 +171,5 @@ Spec §38, restated as a checklist to tick off:
 - [ ] Runs acceptably on a mid-range phone
 - [ ] APK installs
 - [x] Signed AAB can be produced <!-- D4: `npm run android:aab`; keystore is local, not committed -->
+- [x] Tablet-class panels auto-pick LOW and never open an 8M-pixel buffer <!-- B4 2026-08-31 -->
+

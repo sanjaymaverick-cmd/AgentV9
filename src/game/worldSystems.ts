@@ -17,12 +17,20 @@ import { LOD } from './tunables';
  * Moved verbatim from GameEngine; only `this.` -> `this.e.`.
  */
 export class WorldSystems {
+  private readonly moveDir = new THREE.Vector3();
+  private readonly tVec = new THREE.Vector3();
+  private readonly destVec = new THREE.Vector3();
+  private readonly sPos = new THREE.Vector3();
+  private readonly pushDir = new THREE.Vector3();
+  private readonly pDir = new THREE.Vector3();
+  private readonly tmpVel = new THREE.Vector3();
+
   constructor(private e: GameEngine) {}
 
   updateAgentOnFoot(dt: number) {
     const e = this.e;
     const moveSpeed = e.isSprinting ? 11 : e.isCrouching ? 3.5 : 6.5;
-    const moveDir = new THREE.Vector3();
+    const moveDir = this.moveDir.set(0, 0, 0);
 
     if (e.input.forward || e.input.analogThrottle > 0.2) moveDir.z -= (e.input.forward ? 1 : e.input.analogThrottle);
     if (e.input.backward || e.input.analogThrottle < -0.2) moveDir.z += (e.input.backward ? 1 : -e.input.analogThrottle);
@@ -165,7 +173,7 @@ export class WorldSystems {
       const activePlayerPos = e.state.isRiding ? e.bikePos : e.playerPos;
       const distToPlayer = veh.obj.position.distanceTo(activePlayerPos);
       if (distToPlayer < 3.2) {
-        const pushDir = activePlayerPos.clone().sub(veh.obj.position).normalize();
+        const pushDir = this.pushDir.copy(activePlayerPos).sub(veh.obj.position).normalize();
         pushDir.y = 0;
         if (e.state.isRiding) {
           e.bikePos.add(pushDir.multiplyScalar(dt * 8));
@@ -179,7 +187,7 @@ export class WorldSystems {
     const e = this.e;
     for (let i = e.projectiles.length - 1; i >= 0; i--) {
       const p = e.projectiles[i];
-      p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
+      p.mesh.position.add(this.tmpVel.copy(p.vel).multiplyScalar(dt));
       p.life -= dt;
       if (p.type === 'emp') {
         e.stealthAI.tripBreakers(p.mesh.position, 3.4);
@@ -205,7 +213,7 @@ export class WorldSystems {
 
     // 1. Collectibles (Spy Drives)
     e.world.collectibles.forEach((c) => {
-      if (!c.collected && playerTarget.distanceTo(new THREE.Vector3(...c.position)) < 3.2) {
+      if (!c.collected && playerTarget.distanceTo(this.tVec.set(...c.position)) < 3.2) {
         c.collected = true;
         e.state.stats.secretsFound++;
         soundEngine.playCollectible();
@@ -221,7 +229,7 @@ export class WorldSystems {
     // 2. Stunt Rings
     e.world.stuntRings.forEach((r) => {
       r.mesh.rotation.y += 1.5 * dt;
-      if (!r.collected && e.state.isRiding && e.bikePos.distanceTo(new THREE.Vector3(...r.position)) < 4.5) {
+      if (!r.collected && e.state.isRiding && e.bikePos.distanceTo(this.tVec.set(...r.position)) < 4.5) {
         r.collected = true;
         soundEngine.playMissionComplete();
         e.addStuntScore(200, 'HOOP STUNT MASTER');
@@ -260,13 +268,13 @@ export class WorldSystems {
           const curIdx = npc.patrolIndex || 0;
           const nextIdx = (curIdx + 1) % pRoute.length;
           const targetPt = pRoute[nextIdx];
-          const tVec = new THREE.Vector3(targetPt[0], 0.22, targetPt[1]);
+          const tVec = this.tVec.set(targetPt[0], 0.22, targetPt[1]);
 
           const pDist = npc.obj.position.distanceTo(tVec);
           if (pDist < 0.6) {
             npc.patrolIndex = nextIdx;
           } else {
-            const pDir = tVec.clone().sub(npc.obj.position).normalize();
+            const pDir = this.pDir.copy(tVec).sub(npc.obj.position).normalize();
             npc.obj.position.add(pDir.multiplyScalar(2.0 * dt));
             npc.obj.rotation.y = Math.atan2(pDir.x, pDir.z);
 
@@ -296,7 +304,7 @@ export class WorldSystems {
 
     // 4. Update GPS Route Progress & Distance
     if (e.state.activeGPSRoute) {
-      const destVec = new THREE.Vector3(...e.state.activeGPSRoute.targetPos);
+      const destVec = this.destVec.set(...e.state.activeGPSRoute.targetPos);
       const distToDest = playerTarget.distanceTo(destVec);
       e.state.activeGPSRoute.totalDistance = Math.round(distToDest);
       e.state.activeGPSRoute.etaSeconds = Math.max(2, Math.round(distToDest / (e.state.isRiding ? 22 : 6)));
@@ -334,7 +342,7 @@ export class WorldSystems {
         }
 
         // 2. Distance checks
-        const sPos = new THREE.Vector3(...station.position);
+        const sPos = this.sPos.set(...station.position);
         const dist = playerTarget.distanceTo(sPos);
 
         if (dist < minDistance) {
@@ -448,7 +456,13 @@ export class WorldSystems {
     const lod1R2 = propR2 * 0.4;
 
     if (e.world.streetLights) {
+      const lightsOn = e.currentQuality.streetLights;
       for (const sl of e.world.streetLights) {
+        if (!lightsOn) {
+          sl.light.visible = false;
+          sl.light.intensity = 0;
+          continue;
+        }
         const d2 = (sl.group.position.x - p.x) ** 2 + (sl.group.position.z - p.z) ** 2;
         const on = d2 <= lightR2;
         sl.light.visible = on;
@@ -461,9 +475,17 @@ export class WorldSystems {
         t.visible = d2 <= propR2;
         if (!t.visible) continue;
         const near = d2 <= lod1R2;
-        t.traverse((c) => {
-          if (c.name === 'lod1') c.visible = near;
-        });
+        const lod1 = t.userData.lod1 as THREE.Object3D | undefined;
+        if (lod1) {
+          lod1.visible = near;
+        } else {
+          t.traverse((c) => {
+            if (c.name === 'lod1') {
+              t.userData.lod1 = c;
+              c.visible = near;
+            }
+          });
+        }
       }
     }
   }

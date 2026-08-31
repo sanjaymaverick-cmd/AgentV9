@@ -5,6 +5,7 @@ import { SaveManager, SaveDataV1, DEFAULT_CUSTOMIZATION } from './game/saveManag
 import { autoDetectQuality } from './game/quality';
 import { HUD } from './components/HUD';
 import { TouchControls } from './components/TouchControls';
+import { PerfChip } from './components/PerfChip';
 import { soundEngine } from './game/audio';
 
 const CustomizerModal = lazy(() => import('./components/CustomizerModal').then((m) => ({ default: m.CustomizerModal })));
@@ -23,6 +24,16 @@ const DebugMenu = import.meta.env.DEV
 // Trivial device-local settings live outside the versioned save (see saveManager.ts).
 const STORAGE_KEY_SETTINGS = 'agent_v9_settings_v1';
 
+function wantPerfHud(): boolean {
+  try {
+    if (new URLSearchParams(window.location.search).has('perf')) return true;
+    if (localStorage.getItem('agent_v9_show_perf') === '1') return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
 const DEFAULT_SETTINGS: GameSettings = {
   soundVolume: 0.8,
   musicVolume: 0.4,
@@ -33,6 +44,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   qualityLevel: 'medium', // replaced by auto-detect on first launch (see settings init)
   touchControlMode: 'joystick',
   showControlsHelper: true,
+  showPerfHud: false,
 };
 
 export default function App() {
@@ -63,7 +75,7 @@ export default function App() {
           ? 'high'
           : 'low'
         : autoDetectQuality());
-    return { ...DEFAULT_SETTINGS, ...stored, qualityLevel };
+    return { ...DEFAULT_SETTINGS, ...stored, qualityLevel, showPerfHud: stored.showPerfHud ?? wantPerfHud() };
   });
 
   // Modals state
@@ -239,6 +251,8 @@ export default function App() {
           onUpdateSettings={handleUpdateSettings}
         />
       )}
+
+      {(settings.showPerfHud || wantPerfHud()) && <PerfChip />}
 
       <Suspense fallback={null}>
       {/* Modal: Interactive NPC Dialogue */}

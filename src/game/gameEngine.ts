@@ -49,8 +49,9 @@ import { ChaosAlertManager } from './chaosAlertManager';
 import { RaceManager, RacePhase } from './raceManager';
 import { ChaseController, ChasePhase } from './chaseController';
 import { DroneTagManager } from './droneTagManager';
-import { QualityPreset, QUALITY_PRESETS, isSoftwareWebGL } from './quality';
+import { QualityPreset, QUALITY_PRESETS, isSoftwareWebGL, resolvePixelRatio, shouldAntialias } from './quality';
 import { MeshPool, PARTICLE_GEO } from './objectPool';
+import { PerfHarness } from './perfHarness';
 
 export interface GameState {
   isRiding: boolean;
@@ -269,6 +270,7 @@ export class GameEngine {
   public raceManager!: RaceManager;
   public chaseController!: ChaseController;
   public droneTagManager!: DroneTagManager;
+  public perf!: PerfHarness;
   /** Story mission parked while a side sprint runs, so accepting Maya doesn't wipe progress. */
   public stashedStoryMission: Mission | null = null;
 
@@ -359,14 +361,15 @@ export class GameEngine {
     const viewH = Math.max(1, container.clientHeight || 720);
     this.camera = new THREE.PerspectiveCamera(65, viewW / viewH, 0.1, 800);
 
+    const cssPixels = viewW * viewH;
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: shouldAntialias(settings.qualityLevel, cssPixels),
       powerPreference: 'high-performance',
       // Dev-only: lets canvas.toDataURL capture a frame. Production keeps the default (false).
       preserveDrawingBuffer: !!import.meta.env.DEV,
     });
     this.renderer.setSize(viewW, viewH);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(resolvePixelRatio(settings.qualityLevel, viewW, viewH, window.devicePixelRatio || 1));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.18;
     this.renderer.shadowMap.enabled = false;
@@ -374,6 +377,7 @@ export class GameEngine {
     container.appendChild(this.renderer.domElement);
 
     this.initWorld();
+    this.perf = new PerfHarness(this);
     this.applyQuality(this.settings.qualityLevel, false);
     this.engineInput.attach();
     this.gamepadInput.attach();
@@ -543,7 +547,9 @@ export class GameEngine {
 
     // Renderer
     const shadows = q.shadows && !isSoftwareWebGL(this.renderer.getContext());
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatioCap));
+    const cssW = Math.max(1, this.container.clientWidth || window.innerWidth || 1280);
+    const cssH = Math.max(1, this.container.clientHeight || window.innerHeight || 720);
+    this.renderer.setPixelRatio(resolvePixelRatio(level, cssW, cssH, window.devicePixelRatio || 1));
     this.renderer.shadowMap.enabled = shadows;
 
     // Shadows — force the shadow map to rebuild at the new resolution.
@@ -610,6 +616,8 @@ export class GameEngine {
       const dt = Math.min(this.timer.getDelta(), 0.1);
       this.update(dt);
       this.renderer.render(this.scene, this.camera);
+      this.perf?.tick(dt);
+      this.perf?.afterRender();
       this.animFrameId = requestAnimationFrame(loop);
     };
     this.animFrameId = requestAnimationFrame(loop);
@@ -802,6 +810,7 @@ export class GameEngine {
     if (this.animFrameId) {
       cancelAnimationFrame(this.animFrameId);
     }
+    this.perf?.detach();
     // Best-effort final autosave so a reload right after an action keeps it.
     try {
       this.onRequestSave?.(this.exportSave());

@@ -168,6 +168,8 @@ export interface GameSettings {
   touchControlMode: 'joystick' | 'dpad';
   qualityLevel: QualityLevel; // LOW / MEDIUM / HIGH graphics preset (spec §26)
   showControlsHelper: boolean;
+  /** Tiny FPS chip — for on-tablet B4 profiling. Off by default. */
+  showPerfHud: boolean;
 }
 
 export interface RadarEntity {

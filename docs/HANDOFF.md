@@ -1,8 +1,32 @@
 # Handoff — Agent V9: Velocity City
 
 Paste this into a fresh Claude Code session opened at the repo root. It carries the state
-of play as of commit `8a8324a`. The authoritative docs are still `docs/CLAUDE_CODE_PROMPT.md`
-(brief + task list), `docs/ROADMAP.md` (audit), `docs/ARCHITECTURE.md` (module rules).
+of play as of the B4 tablet pass. The authoritative docs are still `docs/CLAUDE_CODE_PROMPT.md`
+(brief + task list), `docs/ROADMAP.md` (audit), `docs/ARCHITECTURE.md` (module rules),
+`docs/B4_TABLET.md` (tablet profile).
+
+---
+
+## B4 tablet (2026-08-31) — landed in software, still needs the physical tablet
+
+The player's device is a **1600×2560 Android tablet @ 2× DPR**. Landscape WebView is
+2560×1600. Uncapped HIGH would fill **5120×3200** pixels every frame.
+
+Shipped:
+
+- `resolvePixelRatio` + drawing-buffer budgets (LOW 2.2M / MED 3.5M / HIGH 5.0M).
+- `autoDetectQuality` **never picks HIGH on tablet-class panels**; mid-range tablets get LOW.
+- MSAA off on large displays; street **SpotLights off on LOW**.
+- Per-frame `Vector3`/`Box3` reuse on the bike, camera, world, foam, collision gather.
+- Production FPS chip: Parental → **Show FPS overlay** (or `?perf=1`).
+- `window.__agentV9` probe (snapshot / teleport / throttle / quality) for `npm run profile`.
+
+Headless profile (SwiftShader, discard FPS): **~1190 draw calls**, ~43k triangles, 1554
+meshes downtown on LOW. The game is **draw-call bound**. If the tablet overlay's min FPS
+is still under 30 on LOW, the next fix is merging/instancing static city (not more pixel-ratio cuts).
+
+No ADB device was available in the session that wrote this. **Done when** the overlay
+holds ≥ 30 FPS riding downtown on the tablet.
 
 ---
 

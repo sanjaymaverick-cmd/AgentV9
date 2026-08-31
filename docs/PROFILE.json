@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-08-31T13:17:26.014Z",
+  "note": "FPS is SwiftShader (software GL) — do not treat it as the 30 FPS phone target. Drawing-buffer size, draw calls, and LOW vs HIGH triangle delta are the device-independent signals.",
+  "results": [
+    {
+      "viewport": "tablet-landscape",
+      "quality": "low",
+      "idle": {
+        "fps": 0,
+        "minFps": 0,
+        "avgFrameMs": 0,
+        "worstFrameMs": 0,
+        "calls": 1190,
+        "tris": 43102,
+        "geometries": 517,
+        "textures": 16,
+        "programs": 36,
+        "heapMB": 21,
+        "quality": "low",
+        "pixelRatio": 1,
+        "drawingBuffer": [
+          1280,
+          800
+        ],
+        "shadows": false,
+        "antialias": false,
+        "meshCount": 1554,
+        "visibleMeshes": 1550,
+        "objectCount": 1849,
+        "css": [
+          1280,
+          800
+        ],
+        "dpr": 2,
+        "bikeSpeed": 0,
+        "pos": [
+          -6,
+          0,
+          0
+        ],
+        "ready": true
+      },
+      "ride": {
+        "fps": 0,
+        "minFps": 0,
+        "avgFrameMs": 0,
+        "worstFrameMs": 0,
+        "calls": 1092,
+        "tris": 42394,
+        "geometries": 519,
+        "textures": 16,
+        "programs": 36,
+        "heapMB": 21,
+        "quality": "low",
+        "pixelRatio": 1,
+        "drawingBuffer": [
+          1280,
+          800
+        ],
+        "shadows": false,
+        "antialias": false,
+        "meshCount": 1554,
+        "visibleMeshes": 1550,
+        "objectCount": 1849,
+        "css": [
+          1280,
+          800
+        ],
+        "dpr": 2,
+        "bikeSpeed": 2.4000000000000004,
+        "pos": [
+          0,
+          0,
+          -6
+        ],
+        "ready": true
+      }
+    }
+  ]
+}

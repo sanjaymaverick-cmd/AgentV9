@@ -14,6 +14,9 @@ import { stepMotorcycleArcade } from './motorcycleArcade';
  * interior collision, mesh pose and the drift-spark particles.
  */
 export class MotorcyclePhysics {
+  private readonly bikeBox = new THREE.Box3();
+  private readonly bikeBoxSize = new THREE.Vector3(1.5, 1.5, 2.5);
+
   constructor(private e: GameEngine) {}
 
   update(dt: number) {
@@ -92,7 +95,7 @@ export class MotorcyclePhysics {
     resolveCircleAabbs(e.bikePos, 1.15, gatherCollisionBoxes(e.world, e.stealthAI.foamBoxes()));
 
     // Check Stunt Ramps Collision
-    const bikeBox = new THREE.Box3().setFromCenterAndSize(e.bikePos, new THREE.Vector3(1.5, 1.5, 2.5));
+    const bikeBox = this.bikeBox.setFromCenterAndSize(e.bikePos, this.bikeBoxSize);
     for (const ramp of e.world.stuntRamps) {
       if (ramp.box.intersectsBox(bikeBox) && e.bikeSpeed > BIKE.rampMinSpeed) {
         e.bikeVerticalVel = BIKE.rampLaunchImpulse * ramp.boostForce;

@@ -21,6 +21,7 @@ npm run build      # production build
 npm run cap:sync   # build web + push into the committed android/ project
 npm run cap:assets # regenerate launcher icons + splash from assets/*.svg
 npm run android    # cap:sync, then open Android Studio (needs local Android SDK)
+npm run profile    # B4: boot dist in Chromium at tablet + phone viewports, dump docs/PROFILE.json
 ```
 
 ## Hard constraints

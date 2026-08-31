@@ -16,6 +16,9 @@ export class StealthAI {
   readonly sounds = new SoundBus();
   private readonly guards: GuardAI;
   private decoyPulse = 0;
+  private readonly foamBoxCache: THREE.Box3[] = [];
+  private readonly escortSafe = new THREE.Vector3(0, 0, -50);
+  private readonly escortBike = new THREE.Vector3(2, 0, -50);
 
   constructor(private e: GameEngine) {
     this.guards = new GuardAI(e);
@@ -74,9 +77,9 @@ export class StealthAI {
     const e = this.e;
     e.escortTimer -= dt;
     // Fade / move smoothly back to safe sidewalk
-    const safeSidewalk = new THREE.Vector3(0, 0, -50);
+    const safeSidewalk = this.escortSafe;
     e.playerPos.lerp(safeSidewalk, dt * STEALTH.escortLerpPerSec);
-    e.bikePos.lerp(safeSidewalk.clone().add(new THREE.Vector3(2, 0, 0)), dt * STEALTH.escortLerpPerSec);
+    e.bikePos.lerp(this.escortBike, dt * STEALTH.escortLerpPerSec);
 
     if (e.escortTimer <= 0) {
       e.isEscortingOut = false;
@@ -213,7 +216,11 @@ export class StealthAI {
   }
 
   foamBoxes(): THREE.Box3[] {
-    return this.e.foamBlobs.map((b) => b.box);
+    const out = this.foamBoxCache;
+    out.length = 0;
+    const blobs = this.e.foamBlobs;
+    for (let i = 0; i < blobs.length; i++) out.push(blobs[i].box);
+    return out;
   }
 
   private tickHologram(dt: number) {

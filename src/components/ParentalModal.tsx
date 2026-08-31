@@ -145,7 +145,18 @@ export const ParentalModal: React.FC<ParentalModalProps> = ({
             </div>
             <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">
               Auto-picked for this device on first launch — adjust if the ride feels choppy.
+              Tablets default to Low so a 1600×2560 panel does not fill millions of pixels.
             </p>
+            <button
+              onClick={() => onUpdateSettings({ ...settings, showPerfHud: !settings.showPerfHud })}
+              className={`mt-2 w-full py-2 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                settings.showPerfHud
+                  ? 'bg-fuchsia-500 text-slate-950 border-fuchsia-400'
+                  : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              {settings.showPerfHud ? 'FPS overlay ON' : 'Show FPS overlay (tablet check)'}
+            </button>
           </div>
 
           {/* Steering Assistance Level */}
