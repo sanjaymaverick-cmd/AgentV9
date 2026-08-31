@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { GameEngine, GameState } from './game/gameEngine';
 import { VehicleCustomization, DisguiseType, GameSettings, CityPOI } from './types/game';
 import { SaveManager, SaveDataV1, DEFAULT_CUSTOMIZATION } from './game/saveManager';
-import { autoDetectQuality } from './game/quality';
+import { autoDetectQuality, isLargeDisplay } from './game/quality';
 import { HUD } from './components/HUD';
 import { TouchControls } from './components/TouchControls';
 import { PerfChip } from './components/PerfChip';
@@ -75,7 +75,16 @@ export default function App() {
           ? 'high'
           : 'low'
         : autoDetectQuality());
-    return { ...DEFAULT_SETTINGS, ...stored, qualityLevel, showPerfHud: stored.showPerfHud ?? wantPerfHud() };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...stored,
+      qualityLevel,
+      showPerfHud:
+        stored.showPerfHud ??
+        (wantPerfHud() ||
+          (typeof window !== 'undefined' &&
+            isLargeDisplay((window.innerWidth || 0) * (window.innerHeight || 0)))),
+    };
   });
 
   // Modals state
@@ -143,6 +152,10 @@ export default function App() {
     soundEngine.unlock();
     soundEngine.startMusic();
     setAudioStarted(true);
+    const orient = screen.orientation as ScreenOrientation & { lock?: (mode: string) => Promise<void> };
+    void orient.lock?.('landscape').catch(() => {
+      /* browsers only allow this in fullscreen / installed APK */
+    });
   };
 
   // Handle Customizer Save
@@ -219,6 +232,9 @@ export default function App() {
             Tap to Start
           </span>
           <span className="text-xs text-slate-400 mt-1">Turns on engine sounds, music and mission voice</span>
+          <span className="text-[11px] text-cyan-200/80 mt-2 font-semibold">
+            Rotate the tablet sideways for the best ride. FPS chip is on for this tablet check.
+          </span>
         </button>
       )}
 

@@ -1,4 +1,5 @@
 import type { GameEngine } from './gameEngine';
+import { resolvePixelRatio } from './quality';
 
 /**
  * Keyboard + window-resize wiring (spec §6). Translates key events into the shared
@@ -119,9 +120,14 @@ export class EngineInput {
     // Resize handler
     const onResize = () => {
       if (!e.container) return;
-      e.camera.aspect = e.container.clientWidth / e.container.clientHeight;
+      const w = Math.max(1, e.container.clientWidth);
+      const h = Math.max(1, e.container.clientHeight);
+      e.camera.aspect = w / h;
       e.camera.updateProjectionMatrix();
-      e.renderer.setSize(e.container.clientWidth, e.container.clientHeight);
+      e.renderer.setSize(w, h);
+      e.renderer.setPixelRatio(
+        resolvePixelRatio(e.settings.qualityLevel, w, h, window.devicePixelRatio || 1),
+      );
     };
     window.addEventListener('resize', onResize);
   }
