@@ -155,6 +155,7 @@ export class SaveController {
     e.state.chaosAlertProgress = w.chaosAlertProgress;
     e.chaosAlertManager.syncToState();
     e.raceManager.onMissionRestored();
+    e.droneTagManager.onMissionRestored();
     e.chaseController.syncToMission();
     e.state.fuelLevel = w.fuelLevel;
     e.state.nitroLevel = w.nitroLevel;

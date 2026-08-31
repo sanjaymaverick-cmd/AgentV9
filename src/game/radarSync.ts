@@ -34,7 +34,8 @@ export class RadarSync {
       label: 'V9 Turbo',
     });
 
-    // 3. Mini Recon Drone
+    // 3. Mini Recon Drone + rogue tagger drones
+    e.droneTagManager.collectRadar(entities);
     if (e.state.isMiniDroneActive) {
       entities.push({
         id: 'mini_drone',

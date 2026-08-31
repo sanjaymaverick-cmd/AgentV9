@@ -96,6 +96,7 @@ export class StealthAI {
     });
 
     this.tripBreakers(pos, radius);
+    e.droneTagManager.applyEmp(pos);
 
     // 2. Check Boss Cargo Drone Relays (Step 5 climax)
     if (e.state.activeMission.currentStepIndex === 4 && e.bossDrone.group.visible) {

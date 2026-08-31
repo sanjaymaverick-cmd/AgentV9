@@ -219,6 +219,31 @@ export const MISSION = {
   objectiveXP: 200,
 } as const;
 
+/** Plaza rogue-drone tagger (Officer Jax side quest). */
+export const DRONE_TAG = {
+  id: 'side_drone_tag',
+  count: 4,
+  empRadius: 14,
+  foamRadius: 3.8,
+  smartsHackDist: 5.5,
+  heightSlack: 10,
+  winHoldSec: 2.6,
+} as const;
+
+export const ROGUE_DRONE_FLIGHTS: readonly {
+  radius: number;
+  height: number;
+  speed: number;
+  cx: number;
+  cz: number;
+  phase: number;
+}[] = [
+  { radius: 14, height: 8.5, speed: 0.72, cx: 0, cz: 0, phase: 0 },
+  { radius: 20, height: 11, speed: -0.55, cx: 4, cz: -6, phase: 1.2 },
+  { radius: 11, height: 7.2, speed: 0.95, cx: -8, cz: 8, phase: 2.4 },
+  { radius: 17, height: 13.5, speed: -0.42, cx: 6, cz: 10, phase: 0.6 },
+];
+
 /** Downtown checkpoint sprint (spec §19) — see RaceManager. */
 export const RACE = {
   downtownId: 'side_race_downtown',

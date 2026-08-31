@@ -183,6 +183,10 @@ export class WorldSystems {
       p.life -= dt;
       if (p.type === 'emp') {
         e.stealthAI.tripBreakers(p.mesh.position, 3.4);
+        e.droneTagManager.applyEmp(p.mesh.position);
+      }
+      if (p.type === 'foam') {
+        e.droneTagManager.applyFoam(p.mesh.position);
       }
 
       if (p.life <= 0) {

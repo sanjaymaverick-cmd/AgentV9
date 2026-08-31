@@ -320,6 +320,20 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
         )}
 
+        {state.droneTagActive && (
+          <div className="bg-slate-900/92 border border-orange-400/70 rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg shadow-orange-950/40">
+            <Crosshair className="w-5 h-5 text-orange-300" />
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-wider text-orange-300">
+                Rogue drones
+              </div>
+              <div className="text-lg font-mono font-black text-white mt-0.5">
+                {state.droneTagTagged}/{state.droneTagTotal} tagged
+              </div>
+            </div>
+          </div>
+        )}
+
         {state.racePhase !== 'idle' && (
           <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
             state.racePhase === 'failed'

@@ -973,6 +973,51 @@ export function createMiniDrone(): {
   return { group, rotors, scannerLight };
 }
 
+/** Hijacked courier drones for the plaza tag side-quest. */
+export function createRogueDeliveryDrone(): { group: THREE.Group; rotors: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  group.name = 'RogueDeliveryDrone';
+  const hull = new THREE.MeshStandardMaterial({ color: '#9a3412', metalness: 0.55, roughness: 0.4 });
+  const dark = new THREE.MeshStandardMaterial({ color: '#1c1917', metalness: 0.5, roughness: 0.5 });
+  const glow = new THREE.MeshBasicMaterial({ color: '#fb923c' });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.22, 0.55), hull);
+  body.castShadow = true;
+  group.add(body);
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.28, 0.4), dark);
+  crate.position.y = -0.22;
+  group.add(crate);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), glow);
+  lamp.position.set(0, -0.08, 0.3);
+  group.add(lamp);
+
+  const rotors: THREE.Mesh[] = [];
+  const armGeo = new THREE.BoxGeometry(0.7, 0.04, 0.05);
+  const armA = new THREE.Mesh(armGeo, dark);
+  const armB = new THREE.Mesh(armGeo, dark);
+  armB.rotation.y = Math.PI / 2;
+  group.add(armA, armB);
+
+  (
+    [
+      [0.38, 0],
+      [-0.38, 0],
+      [0, 0.38],
+      [0, -0.38],
+    ] as [number, number][]
+  ).forEach(([x, z]) => {
+    const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.07, 8), dark);
+    motor.position.set(x, 0.08, z);
+    group.add(motor);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.015, 0.04), glow);
+    blade.position.set(x, 0.13, z);
+    group.add(blade);
+    rotors.push(blade);
+  });
+
+  return { group, rotors };
+}
+
 // ----------------------------------------------------
 // CHAOS SECURITY BOT & ENEMY DRONE
 // ----------------------------------------------------

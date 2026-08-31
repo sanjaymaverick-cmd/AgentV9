@@ -48,6 +48,7 @@ import { SaveController } from './saveController';
 import { ChaosAlertManager } from './chaosAlertManager';
 import { RaceManager, RacePhase } from './raceManager';
 import { ChaseController, ChasePhase } from './chaseController';
+import { DroneTagManager } from './droneTagManager';
 import { QualityPreset, QUALITY_PRESETS, isSoftwareWebGL } from './quality';
 import { MeshPool, PARTICLE_GEO } from './objectPool';
 
@@ -91,6 +92,9 @@ export interface GameState {
   chaseFailMeter: number;
   chaseCheckpoint: number;
   chaseCheckpointTotal: number;
+  droneTagActive: boolean;
+  droneTagTagged: number;
+  droneTagTotal: number;
   nearInteraction: string | null;
   activeMission: Mission;
   stats: PlayerStats;
@@ -264,6 +268,7 @@ export class GameEngine {
   public chaosAlertManager!: ChaosAlertManager;
   public raceManager!: RaceManager;
   public chaseController!: ChaseController;
+  public droneTagManager!: DroneTagManager;
   /** Story mission parked while a side sprint runs, so accepting Maya doesn't wipe progress. */
   public stashedStoryMission: Mission | null = null;
 
@@ -322,6 +327,9 @@ export class GameEngine {
       chaseFailMeter: 0,
       chaseCheckpoint: 0,
       chaseCheckpointTotal: 8,
+      droneTagActive: false,
+      droneTagTagged: 0,
+      droneTagTotal: 4,
       nearInteraction: null,
       activeMission: JSON.parse(JSON.stringify(STORY_MISSION_MIDNIGHT_PROTOTYPE)),
       stats: initialStats,
@@ -446,6 +454,7 @@ export class GameEngine {
     this.chaosAlertManager = new ChaosAlertManager(this);
     this.raceManager = new RaceManager(this);
     this.chaseController = new ChaseController(this);
+    this.droneTagManager = new DroneTagManager(this);
     this.driftPool = new MeshPool(this.scene, () => new THREE.Mesh(
       PARTICLE_GEO,
       new THREE.MeshBasicMaterial({ color: '#38bdf8' })
@@ -652,6 +661,9 @@ export class GameEngine {
 
     // 7b. Story chase (transport drone path) — also writes the live objective
     this.chaseController.update(dt);
+
+    // 7c. Officer Jax plaza drone-tagger
+    this.droneTagManager.update(dt);
 
     // 8. Mission Check & Boss Drone Update
     this.missionRunner.update(dt);
