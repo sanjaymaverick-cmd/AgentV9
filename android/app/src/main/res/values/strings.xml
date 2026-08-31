@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Agent V9: Velocity City</string>
+    <string name="title_activity_main">Agent V9: Velocity City</string>
+    <string name="package_name">com.velocitynine.agentv9</string>
+    <string name="custom_url_scheme">com.velocitynine.agentv9</string>
+</resources>

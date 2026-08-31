@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Adaptive-icon foreground: artwork stays within the centre ~66% safe zone.
+       Two forward chevrons (speed) over a spy-visor bar. -->
+  <defs>
+    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a5f3fc"/>
+      <stop offset="55%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#neon)">
+    <polygon points="360,332 470,332 620,512 470,692 360,692 510,512"/>
+    <polygon points="512,332 590,332 740,512 590,692 512,692 662,512"/>
+  </g>
+  <rect x="330" y="742" width="364" height="46" rx="23" fill="url(#neon)" opacity="0.85"/>
+  <rect x="360" y="236" width="304" height="34" rx="17" fill="url(#neon)" opacity="0.5"/>
+</svg>

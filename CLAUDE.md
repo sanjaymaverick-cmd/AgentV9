@@ -17,6 +17,10 @@ npm run dev        # dev server on :3000
 npm run typecheck  # must pass before any task is done
 npm run smoke      # builds + boots in headless Chromium, fails on runtime errors
 npm run build      # production build
+
+npm run cap:sync   # build web + push into the committed android/ project
+npm run cap:assets # regenerate launcher icons + splash from assets/*.svg
+npm run android    # cap:sync, then open Android Studio (needs local Android SDK)
 ```
 
 ## Hard constraints

@@ -4,8 +4,9 @@ node_modules/
 # build output
 dist/
 build/
-android/
 ios/
+# android/ IS committed (Capacitor native project). Its own android/.gitignore
+# keeps build artifacts, .gradle/, local.properties and copied web assets out.
 
 # caches
 .vite/
