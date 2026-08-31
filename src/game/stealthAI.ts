@@ -3,83 +3,40 @@ import type { GameEngine } from './gameEngine';
 import { createAgentCharacter } from './models';
 import { soundEngine } from './audio';
 import { STEALTH } from './tunables';
+import { GuardAI, SoundBus } from './guardAI';
 
 /**
  * Stealth detection & non-lethal enforcement (spec §11, §16).
  *
- * Per frame: moves patrols, runs vision-cone detection with disguise exemptions, and —
- * on full alert — hands off to the humorous escort-out. City-wide CHAOS heat is owned
- * by ChaosAlertManager; this class only reports sightings and catches.
- *
- * Also owns the EMP radius resolution (bots + boss relays) and the hologram decoy,
- * both fired from `engine.fireGadget()`.
- *
- * TODO(spec §11): this is still a single `alertLevel` float, not the five named states.
+ * Guard awareness is a five-state machine (GuardAI). This class owns the sound bus,
+ * escort-out, EMP, and the hologram decoy. CHAOS heat is still ChaosAlertManager.
  */
 export class StealthAI {
-  constructor(private e: GameEngine) {}
+  readonly sounds = new SoundBus();
+  private readonly guards: GuardAI;
+
+  constructor(private e: GameEngine) {
+    this.guards = new GuardAI(e);
+  }
+
+  resetGuards() {
+    this.guards.resetAll();
+  }
 
   update(dt: number) {
+    this.emitAmbientNoise();
+    this.guards.tick(dt, this.sounds.drain());
+  }
+
+  private emitAmbientNoise() {
     const e = this.e;
-    const playerTarget = e.state.isRiding ? e.bikePos : e.playerPos;
-    const isDisguisedInMuseum = e.state.currentDisguise === 'maintenance_tech' || e.state.currentDisguise === 'lab_scientist';
-    const isDisguisedInStation = e.state.currentDisguise === 'race_crew' || e.state.currentDisguise === 'delivery_worker';
-
-    e.world.bots.forEach((bot) => {
-      // Disabled state
-      if (Date.now() < bot.data.disabledUntil) {
-        bot.cone.visible = false;
-        return;
-      }
-      bot.cone.visible = true;
-
-      // Patrol movement
-      if (bot.data.patrolPoints && bot.data.patrolPoints.length > 1) {
-        const targetPt = bot.data.patrolPoints[bot.data.currentPatrolIndex || 0];
-        const tVec = new THREE.Vector3(...targetPt);
-        const dist = bot.obj.position.distanceTo(tVec);
-
-        if (dist < STEALTH.patrolArriveDist) {
-          bot.data.currentPatrolIndex = ((bot.data.currentPatrolIndex || 0) + 1) % bot.data.patrolPoints.length;
-        } else {
-          const pDir = tVec.clone().sub(bot.obj.position).normalize();
-          bot.obj.position.add(pDir.multiplyScalar(STEALTH.patrolSpeed * dt));
-          bot.obj.rotation.y = Math.atan2(pDir.x, pDir.z);
-        }
-      }
-
-      // Detection Check
-      const distToPlayer = bot.obj.position.distanceTo(playerTarget);
-      const isEffectiveSilent = e.state.isRiding && e.state.isSilentMode;
-      const detectDist = isEffectiveSilent ? bot.data.viewDistance * STEALTH.silentDetectMult : bot.data.viewDistance;
-
-      if (distToPlayer < detectDist) {
-        const toPlayer = playerTarget.clone().sub(bot.obj.position).normalize();
-        const botFacing = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), bot.obj.rotation.y);
-        const angle = botFacing.angleTo(toPlayer);
-
-        const inVisionCone = angle < THREE.MathUtils.degToRad(bot.data.viewAngle / 2);
-        const isExempt = (bot.data.id.includes('museum') && isDisguisedInMuseum) || (bot.data.id.includes('station') && isDisguisedInStation);
-
-        if (inVisionCone && !isExempt) {
-          bot.data.alertLevel = Math.min(1, bot.data.alertLevel + dt * STEALTH.alertRisePerSec);
-          (bot.cone.material as THREE.MeshBasicMaterial).color.set('#ef4444');
-          (bot.cone.material as THREE.MeshBasicMaterial).opacity = 0.45;
-          e.chaosAlertManager.reportSighting(1);
-
-          if (bot.data.alertLevel >= 1 && !e.isEscortingOut) {
-            this.triggerEscortOut(bot.data.name);
-          }
-        } else {
-          bot.data.alertLevel = Math.max(0, bot.data.alertLevel - dt * STEALTH.alertDecayPerSec);
-          (bot.cone.material as THREE.MeshBasicMaterial).color.set('#38bdf8');
-          (bot.cone.material as THREE.MeshBasicMaterial).opacity = 0.15;
-        }
-      }
-    });
-
-    const maxBotAlert = Math.max(0, ...e.world.bots.map((b) => b.data.alertLevel));
-    e.state.stealthVisibility = Math.round(maxBotAlert * 100);
+    const p = e.state.isRiding ? e.bikePos : e.playerPos;
+    if (!e.state.isRiding && e.state.stealthNoise >= 50) {
+      this.sounds.emit({ x: p.x, z: p.z, radius: STEALTH.sprintHearRadius, kind: 'footstep' });
+    }
+    if (e.state.isRiding && !e.state.isSilentMode && Math.abs(e.bikeSpeed) > STEALTH.engineNoiseSpeed) {
+      this.sounds.emit({ x: p.x, z: p.z, radius: STEALTH.engineHearRadius, kind: 'engine' });
+    }
   }
 
   triggerEscortOut(guardName: string) {
@@ -108,7 +65,7 @@ export class StealthAI {
 
     if (e.escortTimer <= 0) {
       e.isEscortingOut = false;
-      e.world.bots.forEach((b) => (b.data.alertLevel = 0));
+      this.resetGuards();
       e.setNotification('Back outside! Choose your path: Speed (ramps), Stealth (disguise/vent), or Smarts (gadgets)!');
       e.notifyState();
     }
@@ -162,11 +119,6 @@ export class StealthAI {
 
     e.setNotification('Hologram Decoy deployed! Guard bots distracted.');
     soundEngine.playAlert();
-
-    // Attract bots toward decoy
-    e.world.bots.forEach((b) => {
-      b.data.alertLevel = 0;
-      b.obj.lookAt(pos);
-    });
+    this.sounds.emit({ x: pos.x, z: pos.z, radius: STEALTH.decoyHearRadius, kind: 'decoy' });
   }
 }

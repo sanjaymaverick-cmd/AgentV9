@@ -3,6 +3,7 @@ import { DisguiseType, GadgetType } from '../types/game';
 import type { GameEngine } from './gameEngine';
 import type { WorldObjects } from './world';
 import { soundEngine } from './audio';
+import { STEALTH } from './tunables';
 
 /**
  * One-shot player actions triggered by input (keyboard, touch buttons, gamepad-to-come):
@@ -23,6 +24,8 @@ export class PlayerActions {
       e.setNotification('V9 Dual-Tone Spy Siren!');
     }
     soundEngine.playHorn();
+    const p = e.state.isRiding ? e.bikePos : e.playerPos;
+    e.stealthAI.sounds.emit({ x: p.x, z: p.z, radius: STEALTH.hornHearRadius, kind: 'horn' });
   }
 
   resetVehicle() {
@@ -239,6 +242,7 @@ export class PlayerActions {
       e.stealthAI.applyEMPRadius(origin, 12);
       e.chaosAlertManager.applyEMPRadius(origin, 12);
       e.chaseController.applyEMPRadius(origin, 12);
+      e.stealthAI.sounds.emit({ x: origin.x, z: origin.z, radius: STEALTH.gadgetHearRadius, kind: 'gadget' });
     } else if (e.state.currentGadget === 'foam') {
       soundEngine.playFoam();
       e.setNotification('Foam Blaster Fired! (Traps bots & blocks doors)');
@@ -249,6 +253,7 @@ export class PlayerActions {
       foamMesh.position.copy(origin);
       e.scene.add(foamMesh);
       e.projectiles.push({ mesh: foamMesh, vel: dir.clone().multiplyScalar(30), type: 'foam', life: 2 });
+      e.stealthAI.sounds.emit({ x: origin.x, z: origin.z, radius: STEALTH.gadgetHearRadius, kind: 'gadget' });
     } else if (e.state.currentGadget === 'hologram') {
       e.stealthAI.deployHologramDecoy(origin);
     }

@@ -64,10 +64,26 @@ export const BIKE = {
 export const STEALTH = {
   patrolSpeed: 2.2, // m/s
   patrolArriveDist: 0.6,
+  investigateSpeed: 3.3,
+  alertSpeed: 4.4,
+  searchSpeed: 2.4,
 
   silentDetectMult: 0.5, // detection range while riding in silent mode
   alertRisePerSec: 1.5, // toward 1.0 when the player is in a vision cone
   alertDecayPerSec: 0.8,
+
+  curiousDurationSec: 2.4,
+  curiousToInvestigateSec: 0.7, // held in cone
+  investigateToAlertSec: 0.55,
+  searchDurationSec: 5.5,
+  hearInvestigateDist: 9,
+
+  engineNoiseSpeed: 12, // m/s on bike, not silent
+  engineHearRadius: 18,
+  sprintHearRadius: 14,
+  hornHearRadius: 22,
+  gadgetHearRadius: 16,
+  decoyHearRadius: 24,
 
   empDisableMs: 9000,
   empBotXP: 60,
@@ -76,6 +92,8 @@ export const STEALTH = {
 
   escortDurationSec: 3.5,
   escortLerpPerSec: 3,
+
+  navLinkDist: 28,
 } as const;
 
 /**

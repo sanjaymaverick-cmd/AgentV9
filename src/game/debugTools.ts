@@ -58,6 +58,7 @@ interface Internals {
   chaosAlertManager: { clear(): void; setLevel(level: number): void };
   raceManager: { start(raceId?: string): void };
   chaseController: { onJumpToStep(index: number): void };
+  stealthAI: { resetGuards(): void };
 }
 
 const ALL_DISGUISES: DisguiseType[] = [
@@ -102,6 +103,7 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
         b.data.alertLevel = 0;
         b.data.disabledUntil = 0;
       });
+      e.stealthAI.resetGuards();
       e.isEscortingOut = false;
       e.escortTimer = 0;
       e.setNotification('[debug] CHAOS alert cleared');

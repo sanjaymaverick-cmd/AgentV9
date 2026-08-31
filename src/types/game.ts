@@ -84,6 +84,17 @@ export interface CollectibleItem {
   hint: string;
 }
 
+export type GuardState = 'unaware' | 'curious' | 'investigating' | 'alert' | 'searching';
+
+export interface RestrictedZone {
+  id: string;
+  allowedDisguises: DisguiseType[];
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
 export interface SecurityBot {
   id: string;
   type: 'guard_bot' | 'camera' | 'drone' | 'hunter';
@@ -93,10 +104,12 @@ export interface SecurityBot {
   currentPatrolIndex?: number;
   viewAngle: number; // degrees
   viewDistance: number;
-  alertLevel: number; // 0 to 1
+  alertLevel: number; // 0 to 1 — derived from GuardState for radar / CHAOS
   disabledUntil: number; // timestamp
   trappedByFoamUntil: number; // timestamp
   name: string;
+  /** Restricted zone this bot enforces; disguise check is data-driven from the zone. */
+  zoneId?: string;
 }
 
 export interface FuelStation {

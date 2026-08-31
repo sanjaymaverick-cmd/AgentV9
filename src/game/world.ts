@@ -14,7 +14,7 @@ import {
   createRaceCheckpoint,
 } from './models';
 import { DOWNTOWN_RACE_GATES } from './tunables';
-import { SecurityBot, CollectibleItem, CityPOI, NPCLocal } from '../types/game';
+import { SecurityBot, CollectibleItem, CityPOI, NPCLocal, RestrictedZone } from '../types/game';
 import {
   addNightSky,
   buildingCollider,
@@ -87,6 +87,8 @@ export interface WorldObjects {
   lockers: { id: string; disguise: string; position: [number, number, number]; mesh: THREE.Mesh }[];
   collectibles: CollectibleItem[];
   bots: { data: SecurityBot; obj: THREE.Group; cone: THREE.Mesh }[];
+  restrictedZones: RestrictedZone[];
+  navWaypoints: [number, number, number][];
   cameras: SecurityCameraObject[];
   undergroundZone: UndergroundZone;
   stuntRings: { id: string; mesh: THREE.Mesh; position: [number, number, number]; collected: boolean }[];
@@ -630,6 +632,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       alertLevel: 0,
       disabledUntil: 0,
       trappedByFoamUntil: 0,
+      zoneId: 'museum_dock',
     },
     {
       id: 'bot_museum_2',
@@ -644,6 +647,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       alertLevel: 0,
       disabledUntil: 0,
       trappedByFoamUntil: 0,
+      zoneId: 'museum_dock',
     },
     {
       id: 'bot_station_1',
@@ -658,6 +662,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       alertLevel: 0,
       disabledUntil: 0,
       trappedByFoamUntil: 0,
+      zoneId: 'station_cargo',
     },
   ];
 
@@ -668,8 +673,38 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     bots.push({ data: bData, obj: botGroup, cone: coneMesh });
   });
 
+  const restrictedZones: RestrictedZone[] = [
+    {
+      id: 'museum_dock',
+      allowedDisguises: ['maintenance_tech', 'lab_scientist'],
+      minX: -22,
+      maxX: 22,
+      minZ: -118,
+      maxZ: -62,
+    },
+    {
+      id: 'station_cargo',
+      allowedDisguises: ['race_crew', 'delivery_worker', 'maintenance_tech'],
+      minX: 62,
+      maxX: 108,
+      minZ: -8,
+      maxZ: 52,
+    },
+  ];
+
+  const navWaypoints: [number, number, number][] = [
+    [0, 0, -96],
+    [0, 0, -83],
+    [0, 0, -70],
+    [-12, 0, -83],
+    [12, 0, -83],
+    [75, 0, 20],
+    [85, 0, 10],
+    [70, 0, 10],
+  ];
+
   // Sweeping security cameras (spec §12). L2 CHAOS enhances range/sweep — see ChaosAlertManager.
-  // TODO(C4): move camera perception into StealthAI with the named AI states.
+  // TODO: fold camera perception into GuardAI with the named awareness states.
   const cameraDefs: { id: string; pos: [number, number, number]; yaw: number; sweep: number }[] = [
     { id: 'cam_museum_front', pos: [8, 4.6, -68], yaw: Math.PI, sweep: 0.85 },
     { id: 'cam_museum_dock', pos: [7, 4.2, -99], yaw: 0, sweep: 0.7 },
@@ -1111,6 +1146,8 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     lockers,
     collectibles,
     bots,
+    restrictedZones,
+    navWaypoints,
     cameras,
     undergroundZone,
     stuntRings,
