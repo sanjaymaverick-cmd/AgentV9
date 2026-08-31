@@ -23,6 +23,13 @@ import {
 import { buildVelocityCity, WorldObjects } from './world';
 import { soundEngine } from './audio';
 import { STORY_MISSION_MIDNIGHT_PROTOTYPE, SIDE_MISSIONS, calculateRank } from './missionEngine';
+import {
+  SaveDataV1,
+  SAVE_DATA_VERSION,
+  cloneDefaultStats,
+  AUTOSAVE_DEBOUNCE_MS,
+  PERIODIC_AUTOSAVE_SEC,
+} from './saveManager';
 
 export interface GameState {
   isRiding: boolean;
@@ -178,30 +185,26 @@ export class GameEngine {
   public settings: GameSettings;
   public onStateUpdate?: (state: GameState) => void;
 
+  /** Called with a fresh snapshot whenever the engine wants progress persisted. */
+  public onRequestSave?: (data: SaveDataV1) => void;
+  private saveDirty = false;
+  private lastSaveAtMs = 0;
+  private periodicSaveTimer = 0;
+
   constructor(
-    container: HTMLElement, 
-    customization: VehicleCustomization, 
-    settings: GameSettings, 
-    savedStats?: PlayerStats
+    container: HTMLElement,
+    customization: VehicleCustomization,
+    settings: GameSettings,
+    savedGame?: SaveDataV1
   ) {
     this.container = container;
     this.customization = customization;
     this.settings = settings;
     this.clock = new THREE.Clock();
 
-    const initialStats: PlayerStats = savedStats || {
-      xp: 150,
-      rank: 'Rookie',
-      credits: 300,
-      secretsFound: 0,
-      stuntsCompleted: 0,
-      missionsCompleted: [],
-      unlockedDisguises: ['agent_suit', 'maintenance_tech', 'delivery_worker'],
-      unlockedGadgets: ['emp', 'foam', 'drone', 'hologram', 'remote_v9'],
-      unlockedUpgrades: ['turbo_v1'],
-      bestRaceTimes: {},
-      stuntHighScore: 0,
-    };
+    const initialStats: PlayerStats = savedGame?.stats
+      ? { ...cloneDefaultStats(), ...savedGame.stats }
+      : cloneDefaultStats();
 
     this.state = {
       isRiding: true, // Start mounted for immediate fun
@@ -262,12 +265,19 @@ export class GameEngine {
     this.initWorld();
     this.setupEventListeners();
     this.setupPointerControls();
+
+    if (savedGame) {
+      this.applySave(savedGame);
+    }
+
     this.startLoop();
 
-    // Kira voice intro
-    setTimeout(() => {
-      soundEngine.speak('Agent V9, welcome to Velocity City. Head north to the Technology Museum to investigate the breach.', 'kira');
-    }, 1200);
+    // Kira voice intro — skipped on a resumed game so we don't replay the opening brief.
+    if (!savedGame) {
+      setTimeout(() => {
+        soundEngine.speak('Agent V9, welcome to Velocity City. Head north to the Technology Museum to investigate the breach.', 'kira');
+      }, 1200);
+    }
   }
 
   private initWorld() {
@@ -366,6 +376,8 @@ export class GameEngine {
     this.agentChar.group.position.copy(this.playerPos);
     this.agentChar.group.visible = !this.state.isRiding;
     this.scene.add(this.agentChar.group);
+
+    this.requestAutosave();
   }
 
   // ---------------------------------------------------
@@ -607,6 +619,7 @@ export class GameEngine {
       this.motorcycle.riderMesh.visible = true;
       this.setNotification('Mounted V9! Press [W] to Accelerate, [Shift] for Nitro Boost');
       soundEngine.speak('V9 systems online.', 'v9');
+      this.requestAutosave();
       this.notifyState();
       return;
     } else if (this.state.isRiding && Math.abs(this.bikeSpeed) < 8) {
@@ -619,6 +632,7 @@ export class GameEngine {
       this.motorcycle.riderMesh.visible = false;
       this.bikeSpeed = 0;
       this.setNotification('Dismounted V9. Ready for on-foot infiltration!');
+      this.requestAutosave();
       this.notifyState();
       return;
     }
@@ -699,6 +713,7 @@ export class GameEngine {
     this.state.currentGadget = gadget;
     this.setNotification(`Equipped Gadget: ${gadget.toUpperCase()}`);
     soundEngine.playJump();
+    this.requestAutosave();
     this.notifyState();
   }
 
@@ -838,6 +853,7 @@ export class GameEngine {
     };
     this.setNotification(`Equipped Disguise: ${disguiseNames[disguise]}! Guards in designated zones won't suspect you.`);
     soundEngine.playCollectible();
+    this.requestAutosave();
     this.notifyState();
   }
 
@@ -860,6 +876,7 @@ export class GameEngine {
       this.state.chaosAlertLevel = 0;
       this.state.chaosAlertProgress = 0;
     }
+    this.requestAutosave();
     this.notifyState();
   }
 
@@ -932,6 +949,16 @@ export class GameEngine {
       this.syncRadarEntities();
       this.notifyState();
       this.hudUpdateTimer = 0;
+    }
+
+    // Autosave: heartbeat captures the player's position; event-driven writes are debounced.
+    this.periodicSaveTimer += dt;
+    if (this.periodicSaveTimer >= PERIODIC_AUTOSAVE_SEC) {
+      this.periodicSaveTimer = 0;
+      this.saveDirty = true;
+    }
+    if (this.saveDirty && performance.now() - this.lastSaveAtMs >= AUTOSAVE_DEBOUNCE_MS) {
+      this.flushSave();
     }
   }
 
@@ -1555,6 +1582,7 @@ export class GameEngine {
     this.state.chaosAlertProgress = Math.round(maxBotAlert * 100);
     if (this.state.chaosAlertProgress > 75 && this.state.chaosAlertLevel < 2) {
       this.state.chaosAlertLevel = 2;
+      this.requestAutosave();
     }
   }
 
@@ -1611,6 +1639,7 @@ export class GameEngine {
         soundEngine.playCollectible();
         this.addXP(100, `Found Secret: ${c.name}`);
         this.setNotification(`Secret Found: ${c.name}! (${this.state.stats.secretsFound}/6)`);
+        this.requestAutosave();
         // Remove 3D mesh
         const mesh = this.scene.getObjectByName(c.id);
         if (mesh) this.scene.remove(mesh);
@@ -1628,6 +1657,7 @@ export class GameEngine {
         this.state.fuelLevel = Math.min(100, this.state.fuelLevel + 25);
         this.setNotification('STUNT RING CLEARED! Full Nitro + 25% Energy Refill!');
         (r.mesh.material as THREE.MeshBasicMaterial).color.set('#22c55e');
+        this.requestAutosave();
       }
     });
 
@@ -1946,6 +1976,7 @@ export class GameEngine {
       soundEngine.playMissionComplete();
       this.addXP(200, `Objective Complete: ${step.title} (${path.toUpperCase()})`);
       this.setNotification(`Objective Complete via ${path.toUpperCase()} approach!`);
+      this.requestAutosave();
 
       // Trigger Boss Step
       if (this.state.activeMission.currentStepIndex === 4) {
@@ -1984,6 +2015,7 @@ export class GameEngine {
     });
 
     this.setNotification('MISSION COMPLETE! Unlocked Holographic Cyber Paint & Super Jump Upgrade!');
+    this.requestAutosave();
     this.notifyState();
   }
 
@@ -2235,6 +2267,7 @@ export class GameEngine {
       this.setNotification(`Side Mission Started: ${sideQuest.title}`);
       soundEngine.playMissionComplete();
       this.setGPSDestination(sideQuest.steps[0].targetPosition, sideQuest.title);
+      this.requestAutosave();
     }
     this.notifyState();
   }
@@ -2245,9 +2278,163 @@ export class GameEngine {
     }
   }
 
+  // ---------------------------------------------------
+  // SAVE / LOAD (spec §21)
+  // ---------------------------------------------------
+
+  /** Mark progress dirty; the next update tick writes it once the debounce window passes. */
+  public requestAutosave() {
+    this.saveDirty = true;
+  }
+
+  /** Persist immediately, bypassing the debounce (used on teardown and explicit saves). */
+  public flushSave() {
+    this.saveDirty = false;
+    this.lastSaveAtMs = performance.now();
+    this.onRequestSave?.(this.exportSave());
+  }
+
+  /** Snapshot every piece of progress the spec requires to survive a reload. */
+  public exportSave(): SaveDataV1 {
+    const m = this.state.activeMission;
+    const isSideQuest = SIDE_MISSIONS.some((s) => s.id === m.id);
+    return {
+      version: SAVE_DATA_VERSION,
+      savedAt: Date.now(),
+      player: {
+        isRiding: this.state.isRiding,
+        isSilentMode: this.state.isSilentMode,
+        playerPos: [this.playerPos.x, this.playerPos.y, this.playerPos.z],
+        playerRot: this.playerRot,
+        bikePos: [this.bikePos.x, this.bikePos.y, this.bikePos.z],
+        bikeRot: this.bikeRot,
+        currentDisguise: this.state.currentDisguise,
+        currentGadget: this.state.currentGadget,
+      },
+      mission: {
+        activeMissionId: m.id,
+        isSideQuest,
+        currentStepIndex: m.currentStepIndex,
+        chosenPath: m.chosenPath,
+        completedStepIds: m.steps.filter((s) => s.completed).map((s) => s.id),
+        completed: m.completed,
+        bossRelaysRemaining: this.state.bossRelaysRemaining,
+      },
+      world: {
+        collectedCollectibleIds: this.world.collectibles.filter((c) => c.collected).map((c) => c.id),
+        collectedStuntRingIds: this.world.stuntRings.filter((r) => r.collected).map((r) => r.id),
+        hackedTerminalIds: this.world.terminals.filter((t) => t.hacked).map((t) => t.id),
+        chaosAlertLevel: this.state.chaosAlertLevel,
+        chaosAlertProgress: this.state.chaosAlertProgress,
+        fuelLevel: this.state.fuelLevel,
+        nitroLevel: this.state.nitroLevel,
+      },
+      stats: this.state.stats,
+      customization: this.customization,
+    };
+  }
+
+  /** Restore a loaded save into the live scene. Runs once, during construction. */
+  private applySave(data: SaveDataV1) {
+    // --- Player & vehicle transforms ---
+    const p = data.player;
+    this.playerPos.set(...p.playerPos);
+    this.playerRot = p.playerRot;
+    this.bikePos.set(...p.bikePos);
+    this.bikeRot = p.bikeRot;
+    this.bikeSpeed = 0;
+    this.playerVel.set(0, 0, 0);
+    this.motorcycle.group.position.copy(this.bikePos);
+    this.motorcycle.group.rotation.y = this.bikeRot;
+    this.agentChar.group.position.copy(this.playerPos);
+    this.agentChar.group.rotation.y = this.playerRot;
+
+    this.state.isRiding = p.isRiding;
+    this.state.isSilentMode = p.isSilentMode;
+
+    // --- Inventory / appearance ---
+    this.state.currentGadget = p.currentGadget;
+    this.state.currentDisguise = p.currentDisguise;
+    this.updateCustomization(this.customization); // rebuilds agent + bike for disguise/colours
+
+    // Mount visibility must be re-asserted AFTER updateCustomization rebuilds the meshes.
+    this.agentChar.group.visible = !p.isRiding;
+    this.motorcycle.riderMesh.visible = p.isRiding;
+
+    // --- Mission progress ---
+    const template = data.mission.isSideQuest
+      ? SIDE_MISSIONS.find((s) => s.id === data.mission.activeMissionId)
+      : data.mission.activeMissionId === STORY_MISSION_MIDNIGHT_PROTOTYPE.id
+      ? STORY_MISSION_MIDNIGHT_PROTOTYPE
+      : undefined;
+
+    if (template) {
+      const mission: Mission = JSON.parse(JSON.stringify(template));
+      mission.active = true;
+      mission.completed = data.mission.completed;
+      mission.chosenPath = data.mission.chosenPath;
+      mission.currentStepIndex = Math.max(
+        0,
+        Math.min(data.mission.currentStepIndex, mission.steps.length)
+      );
+      mission.steps.forEach((s, i) => {
+        s.completed = i < mission.currentStepIndex || data.mission.completedStepIds.includes(s.id);
+      });
+      this.state.activeMission = mission;
+      this.state.bossRelaysRemaining = data.mission.bossRelaysRemaining;
+      if (!mission.completed && mission.currentStepIndex >= 4) {
+        this.bossDrone.group.visible = true;
+      }
+    }
+
+    // --- World object state ---
+    const w = data.world;
+    this.world.collectibles.forEach((c) => {
+      if (w.collectedCollectibleIds.includes(c.id)) {
+        c.collected = true;
+        const mesh = this.scene.getObjectByName(c.id);
+        if (mesh) this.scene.remove(mesh);
+      }
+    });
+    this.world.stuntRings.forEach((r) => {
+      if (w.collectedStuntRingIds.includes(r.id)) {
+        r.collected = true;
+        (r.mesh.material as THREE.MeshBasicMaterial).color.set('#22c55e');
+      }
+    });
+    this.world.terminals.forEach((t) => {
+      if (w.hackedTerminalIds.includes(t.id)) {
+        t.hacked = true;
+        (t.mesh.children[0] as THREE.Mesh).material = new THREE.MeshBasicMaterial({ color: '#22c55e' });
+        if (t.id === 'term_museum_dock') this.world.museumLaserGate.visible = false;
+        if (t.id === 'term_station_crane') this.world.stationCraneGate.position.y += 6;
+      }
+    });
+
+    this.state.chaosAlertLevel = w.chaosAlertLevel;
+    this.state.chaosAlertProgress = w.chaosAlertProgress;
+    this.state.fuelLevel = w.fuelLevel;
+    this.state.nitroLevel = w.nitroLevel;
+
+    // --- Framing ---
+    this.state.notification = 'Progress restored — welcome back, Agent!';
+    this.state.radioMessage = {
+      sender: 'Agent Kira (HQ)',
+      text: 'Welcome back, Agent V9. Picking up right where you left off. Check your objective marker.',
+      time: Date.now(),
+    };
+    this.lastSaveAtMs = performance.now();
+  }
+
   public destroy() {
     if (this.animFrameId) {
       cancelAnimationFrame(this.animFrameId);
+    }
+    // Best-effort final autosave so a reload right after an action keeps it.
+    try {
+      this.onRequestSave?.(this.exportSave());
+    } catch {
+      /* engine may be half torn down; ignore */
     }
     soundEngine.stopMusic();
     this.renderer.dispose();

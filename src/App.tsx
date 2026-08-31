@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GameEngine, GameState } from './game/gameEngine';
-import { VehicleCustomization, DisguiseType, GameSettings, PlayerStats, CityPOI } from './types/game';
+import { VehicleCustomization, DisguiseType, GameSettings, CityPOI } from './types/game';
+import { SaveManager, SaveDataV1, DEFAULT_CUSTOMIZATION } from './game/saveManager';
 import { HUD } from './components/HUD';
 import { CustomizerModal } from './components/CustomizerModal';
 import { MissionsModal } from './components/MissionsModal';
@@ -12,19 +13,8 @@ import { NPCDialogueModal } from './components/NPCDialogueModal';
 import { TouchControls } from './components/TouchControls';
 import { soundEngine } from './game/audio';
 
-const STORAGE_KEY_CUSTOM = 'agent_v9_customization_v1';
+// Trivial device-local settings live outside the versioned save (see saveManager.ts).
 const STORAGE_KEY_SETTINGS = 'agent_v9_settings_v1';
-const STORAGE_KEY_STATS = 'agent_v9_stats_v1';
-
-const DEFAULT_CUSTOMIZATION: VehicleCustomization = {
-  bodyColor: '#06b6d4', // Neon Cyan
-  secondaryColor: '#0284c7',
-  underglowColor: '#38bdf8',
-  rimColor: '#f59e0b',
-  decalStyle: 'academy',
-  exhaustEffect: 'blue_flame',
-  suitColor: '#0284c7',
-};
 
 const DEFAULT_SETTINGS: GameSettings = {
   soundVolume: 0.8,
@@ -43,14 +33,12 @@ export default function App() {
   const engineRef = useRef<GameEngine | null>(null);
 
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [customization, setCustomization] = useState<VehicleCustomization>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM);
-      return saved ? JSON.parse(saved) : DEFAULT_CUSTOMIZATION;
-    } catch {
-      return DEFAULT_CUSTOMIZATION;
-    }
-  });
+
+  // One versioned save, loaded (and migrated) once for this mount.
+  const [initialSave] = useState<SaveDataV1 | null>(() => SaveManager.load());
+  const [customization, setCustomization] = useState<VehicleCustomization>(
+    () => initialSave?.customization ?? DEFAULT_CUSTOMIZATION
+  );
 
   const [settings, setSettings] = useState<GameSettings>(() => {
     try {
@@ -74,23 +62,12 @@ export default function App() {
   useEffect(() => {
     if (!containerRef.current || engineRef.current) return;
 
-    let savedStats: PlayerStats | undefined;
-    try {
-      const statsRaw = localStorage.getItem(STORAGE_KEY_STATS);
-      if (statsRaw) savedStats = JSON.parse(statsRaw);
-    } catch {
-      // Use defaults
-    }
-
-    const engine = new GameEngine(containerRef.current, customization, settings, savedStats);
+    const engine = new GameEngine(containerRef.current, customization, settings, initialSave ?? undefined);
     engine.onStateUpdate = (newState) => {
       setGameState({ ...newState });
-      // Persist stats
-      try {
-        localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(newState.stats));
-      } catch {
-        // LocalStorage fallback
-      }
+    };
+    engine.onRequestSave = (data) => {
+      SaveManager.save(data);
     };
 
     engineRef.current = engine;
@@ -122,8 +99,8 @@ export default function App() {
   // Handle Customizer Save
   const handleSaveCustomization = (newCustom: VehicleCustomization, newDisguise: DisguiseType) => {
     setCustomization(newCustom);
-    localStorage.setItem(STORAGE_KEY_CUSTOM, JSON.stringify(newCustom));
     if (engineRef.current) {
+      // Both calls flag an autosave; SaveManager writes the new look with the rest of progress.
       engineRef.current.equipDisguise(newDisguise);
       engineRef.current.updateCustomization(newCustom);
     }

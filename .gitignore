@@ -30,3 +30,6 @@ npm-debug.log*
 # test artefacts
 /tmp-screenshots/
 shot*.png
+
+# agent-local tooling (Claude Code)
+.claude/
