@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { pointInAabb, resolveCircleAabbs } from './collision';
+import { inRadiusXZ, pointInAabb, resolveCircleAabbs } from './collision';
 
 function aabb(cx: number, cz: number, w: number, d: number, h = 10): THREE.Box3 {
   return new THREE.Box3().setFromCenterAndSize(
@@ -43,6 +43,16 @@ describe('resolveCircleAabbs', () => {
     const pos = new THREE.Vector3(0, 1, 0);
     resolveCircleAabbs(pos, 1.2, [aabb(2, 0, 2, 4)]);
     expect(pos.x).toBeCloseTo(-0.2, 5);
+  });
+});
+
+describe('inRadiusXZ', () => {
+  it('traps a bot standing in a foam blob', () => {
+    expect(inRadiusXZ(0, 0, 1.2, 0.4, 2.5)).toBe(true);
+  });
+
+  it('misses a bot down the hall', () => {
+    expect(inRadiusXZ(0, 0, 8, 0, 2.5)).toBe(false);
   });
 });
 

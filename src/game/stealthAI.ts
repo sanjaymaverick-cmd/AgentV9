@@ -15,6 +15,7 @@ import { raiseStationGate, type SideBreakerObject } from './world';
 export class StealthAI {
   readonly sounds = new SoundBus();
   private readonly guards: GuardAI;
+  private decoyPulse = 0;
 
   constructor(private e: GameEngine) {
     this.guards = new GuardAI(e);
@@ -36,6 +37,8 @@ export class StealthAI {
   }
 
   update(dt: number) {
+    this.tickHologram(dt);
+    this.tickFoamBlobs(dt);
     this.emitAmbientNoise();
     this.guards.tick(dt, this.sounds.drain());
   }
@@ -156,10 +159,96 @@ export class StealthAI {
     decoy.group.position.copy(pos);
     e.scene.add(decoy.group);
     e.hologramDecoy = decoy.group;
-    e.hologramTimer = 10; // 10 seconds
+    e.hologramTimer = STEALTH.hologramDurationSec;
+    this.decoyPulse = 0;
 
     e.setNotification('Hologram Decoy deployed! Guard bots distracted.');
     soundEngine.playAlert();
     this.sounds.emit({ x: pos.x, z: pos.z, radius: STEALTH.decoyHearRadius, kind: 'decoy' });
+  }
+
+  /** Trap nearby bots in foam. Returns true if at least one bot was caught. */
+  tryTrapBotsWithFoam(pos: THREE.Vector3): boolean {
+    const e = this.e;
+    const now = Date.now();
+    let hit = false;
+    for (const b of e.world.bots) {
+      if (now < b.data.trappedByFoamUntil) continue;
+      if (b.obj.position.distanceTo(pos) > STEALTH.foamHitRadius) continue;
+      b.data.trappedByFoamUntil = now + STEALTH.foamTrapMs;
+      b.cone.visible = false;
+      e.addXP(STEALTH.foamBotXP, `Foam trapped ${b.data.name}`);
+      e.setNotification(`Foam trapped ${b.data.name}!`);
+      hit = true;
+    }
+    return hit;
+  }
+
+  spawnFoamBlob(pos: THREE.Vector3) {
+    const e = this.e;
+    const upgraded = e.state.stats.unlockedUpgrades.includes('foam_capacity');
+    const cap = upgraded ? STEALTH.foamMaxBlobsUpgraded : STEALTH.foamMaxBlobs;
+    const life = STEALTH.foamBlobLifeSec * (upgraded ? 1.4 : 1);
+    while (e.foamBlobs.length >= cap) {
+      const old = e.foamBlobs.shift();
+      if (old) e.scene.remove(old.mesh);
+    }
+    const r = STEALTH.foamBlobRadius;
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 10, 8),
+      new THREE.MeshStandardMaterial({
+        color: '#fb923c',
+        roughness: 0.95,
+        transparent: true,
+        opacity: 0.85,
+      }),
+    );
+    mesh.position.set(pos.x, Math.max(r, pos.y), pos.z);
+    e.scene.add(mesh);
+    const box = new THREE.Box3().setFromCenterAndSize(
+      mesh.position,
+      new THREE.Vector3(r * 2, r * 2, r * 2),
+    );
+    e.foamBlobs.push({ mesh, life, box });
+  }
+
+  foamBoxes(): THREE.Box3[] {
+    return this.e.foamBlobs.map((b) => b.box);
+  }
+
+  private tickHologram(dt: number) {
+    const e = this.e;
+    if (!e.hologramDecoy) return;
+    e.hologramTimer -= dt;
+    if (e.hologramTimer <= 0) {
+      e.scene.remove(e.hologramDecoy);
+      e.hologramDecoy = null;
+      e.setNotification('Hologram decoy fizzled out.');
+      return;
+    }
+    this.decoyPulse += dt;
+    if (this.decoyPulse >= STEALTH.hologramPulseSec) {
+      this.decoyPulse = 0;
+      this.sounds.emit({
+        x: e.hologramDecoy.position.x,
+        z: e.hologramDecoy.position.z,
+        radius: STEALTH.decoyHearRadius,
+        kind: 'decoy',
+      });
+    }
+  }
+
+  private tickFoamBlobs(dt: number) {
+    const e = this.e;
+    for (let i = e.foamBlobs.length - 1; i >= 0; i--) {
+      const blob = e.foamBlobs[i];
+      blob.life -= dt;
+      const mat = blob.mesh.material as THREE.MeshStandardMaterial;
+      mat.opacity = Math.max(0.2, blob.life / STEALTH.foamBlobLifeSec) * 0.85;
+      if (blob.life <= 0) {
+        e.scene.remove(blob.mesh);
+        e.foamBlobs.splice(i, 1);
+      }
+    }
   }
 }

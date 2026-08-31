@@ -220,7 +220,7 @@ export class GameEngine {
 
   // Foam & Projectiles
   public projectiles: { mesh: THREE.Mesh; vel: THREE.Vector3; type: 'emp' | 'foam'; life: number }[] = [];
-  public foamBlobs: { mesh: THREE.Mesh; life: number }[] = [];
+  public foamBlobs: { mesh: THREE.Mesh; life: number; box: THREE.Box3 }[] = [];
   public hologramDecoy: THREE.Group | null = null;
   public hologramTimer = 0;
 

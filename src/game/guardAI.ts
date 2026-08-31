@@ -98,7 +98,7 @@ export class GuardAI {
     const disguise = e.state.currentDisguise;
 
     for (const bot of e.world.bots) {
-      if (Date.now() < bot.data.disabledUntil) {
+      if (Date.now() < bot.data.disabledUntil || Date.now() < bot.data.trappedByFoamUntil) {
         bot.cone.visible = false;
         continue;
       }
@@ -387,7 +387,7 @@ export class GuardAI {
 
   private alarmNearbyGuards(at: THREE.Vector3) {
     for (const bot of this.e.world.bots) {
-      if (Date.now() < bot.data.disabledUntil) continue;
+      if (Date.now() < bot.data.disabledUntil || Date.now() < bot.data.trappedByFoamUntil) continue;
       const d = Math.hypot(bot.obj.position.x - at.x, bot.obj.position.z - at.z);
       if (d > STEALTH.cameraAlarmRadius) continue;
       const brain = this.brain(bot.data.id);

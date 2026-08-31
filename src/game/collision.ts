@@ -40,6 +40,10 @@ export function resolveCircleAabbs(
   }
 }
 
+export function inRadiusXZ(ax: number, az: number, bx: number, bz: number, radius: number): boolean {
+  return Math.hypot(ax - bx, az - bz) <= radius;
+}
+
 export function pointInAabb(
   x: number,
   z: number,

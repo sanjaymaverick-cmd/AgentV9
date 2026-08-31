@@ -1301,8 +1301,8 @@ function createSideBreaker(id: string, pos: [number, number, number]): SideBreak
 }
 
 /** City footprints + museum walls + currently-closed gates. */
-export function gatherCollisionBoxes(world: WorldObjects): THREE.Box3[] {
-  const boxes = world.colliders.concat(world.interiorColliders);
+export function gatherCollisionBoxes(world: WorldObjects, extra: THREE.Box3[] = []): THREE.Box3[] {
+  const boxes = world.colliders.concat(world.interiorColliders, extra);
   if (world.museumLaserGate.visible) boxes.push(world.museumLaserBox);
   if (!world.museumStaffDoor.open) boxes.push(world.museumStaffDoor.box);
   // Closed crane gate (hack raises the mesh to y ≥ 8).

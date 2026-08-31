@@ -74,7 +74,7 @@ export class WorldSystems {
       }
     }
 
-    resolveCircleAabbs(e.playerPos, 0.55, gatherCollisionBoxes(e.world));
+    resolveCircleAabbs(e.playerPos, 0.55, gatherCollisionBoxes(e.world, e.stealthAI.foamBoxes()));
 
     e.agentChar.group.position.copy(e.playerPos);
     e.agentChar.group.rotation.y = e.playerRot;
@@ -186,10 +186,13 @@ export class WorldSystems {
         e.droneTagManager.applyEmp(p.mesh.position);
       }
       if (p.type === 'foam') {
+        const trapped = e.stealthAI.tryTrapBotsWithFoam(p.mesh.position);
         e.droneTagManager.applyFoam(p.mesh.position);
+        if (trapped) p.life = 0;
       }
 
       if (p.life <= 0) {
+        if (p.type === 'foam') e.stealthAI.spawnFoamBlob(p.mesh.position);
         e.scene.remove(p.mesh);
         e.projectiles.splice(i, 1);
       }

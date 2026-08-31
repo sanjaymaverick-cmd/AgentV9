@@ -87,6 +87,15 @@ export const STEALTH = {
 
   empDisableMs: 9000,
   empBotXP: 60,
+  foamHitRadius: 2.5,
+  foamBlobRadius: 1.45,
+  foamBlobLifeSec: 8,
+  foamTrapMs: 8000,
+  foamBotXP: 40,
+  foamMaxBlobs: 6,
+  foamMaxBlobsUpgraded: 10,
+  hologramDurationSec: 10,
+  hologramPulseSec: 1.2,
   relayHitDist: 14,
   relayXP: 250,
 
