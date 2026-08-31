@@ -320,6 +320,39 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
         )}
 
+        {state.isMiniDroneActive && (
+          <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
+            state.droneReturning
+              ? 'border-amber-400/70 shadow-amber-950/40'
+              : state.droneBattery <= 22
+              ? 'border-red-500/70 shadow-red-950/40'
+              : 'border-purple-400/70 shadow-purple-950/40'
+          }`}>
+            {state.droneBattery <= 22
+              ? <BatteryWarning className="w-5 h-5 text-red-400" />
+              : <BatteryCharging className="w-5 h-5 text-purple-300" />}
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-wider text-purple-300">
+                {state.droneReturning ? 'Returning' : 'Recon drone'}
+              </div>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className={`text-lg font-mono font-black ${
+                  state.droneBattery <= 22 ? 'text-red-400' : 'text-white'
+                }`}>{Math.round(state.droneBattery)}%</span>
+                <span className="text-[10px] font-bold text-slate-400">battery</span>
+              </div>
+              <div className="w-40 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${
+                    state.droneBattery <= 22 ? 'bg-red-500' : 'bg-purple-400'
+                  }`}
+                  style={{ width: `${Math.max(0, Math.min(100, state.droneBattery))}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {state.droneTagActive && (
           <div className="bg-slate-900/92 border border-orange-400/70 rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg shadow-orange-950/40">
             <Crosshair className="w-5 h-5 text-orange-300" />

@@ -6,6 +6,20 @@
  * dials in one place. Grouped by the subsystem that owns them.
  */
 
+/** Mini recon drone (spec §15) — battery + leash. */
+export const DRONE = {
+  maxRange: 55,
+  batteryDrainIdlePerSec: 3.6,
+  batteryDrainMovePerSec: 7.2,
+  batteryRegenPerSec: 14,
+  launchMinBattery: 15,
+  returnSpeed: 24,
+  dockDistance: 3.2,
+  lowBattery: 22,
+  rangeWarn: 46,
+  moveInputDeadzone: 0.2,
+} as const;
+
 /** V9 motorcycle arcade physics — see MotorcyclePhysics. */
 export const BIKE = {
   // Acceleration (m/s²) by state

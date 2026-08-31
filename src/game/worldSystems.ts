@@ -4,7 +4,8 @@ import type { GameEngine } from './gameEngine';
 import { gatherCollisionBoxes, type WorldObjects } from './world';
 import { resolveCircleAabbs } from './collision';
 import { soundEngine } from './audio';
-import { LOD } from './tunables';
+import { DRONE, LOD } from './tunables';
+import { droneOwnerRange, shouldAutoReturn, stepDroneBattery } from './dronePower';
 
 /**
  * The per-frame "everything else in the world" bundle:
@@ -102,25 +103,82 @@ export class WorldSystems {
 
   updateMiniDrone(dt: number) {
     const e = this.e;
-    const droneSpeed = 16;
-    if (e.input.forward || e.input.analogThrottle > 0.2) {
-      e.dronePos.x -= Math.sin(e.droneRot) * droneSpeed * dt;
-      e.dronePos.z -= Math.cos(e.droneRot) * droneSpeed * dt;
+    const owner = e.state.isRiding ? e.bikePos : e.playerPos;
+    const moving =
+      e.input.forward ||
+      e.input.backward ||
+      e.input.jump ||
+      e.input.sneak ||
+      Math.abs(e.input.analogThrottle) > DRONE.moveInputDeadzone;
+
+    if (!e.state.isMiniDroneActive) {
+      e.state.droneBattery = stepDroneBattery(e.state.droneBattery, dt, {
+        docked: true,
+        moving: false,
+        returning: false,
+      });
+      return;
     }
-    if (e.input.backward || e.input.analogThrottle < -0.2) {
-      e.dronePos.x += Math.sin(e.droneRot) * droneSpeed * dt;
-      e.dronePos.z += Math.cos(e.droneRot) * droneSpeed * dt;
+
+    e.state.droneBattery = stepDroneBattery(e.state.droneBattery, dt, {
+      docked: false,
+      moving: moving && !e.state.droneReturning,
+      returning: e.state.droneReturning,
+    });
+
+    const range = droneOwnerRange(e.dronePos.x, e.dronePos.z, owner.x, owner.z);
+    if (!e.state.droneReturning && shouldAutoReturn(e.state.droneBattery, range)) {
+      e.state.droneReturning = true;
+      const why = e.state.droneBattery <= 0 ? 'Battery empty' : 'Out of range';
+      e.setNotification(`${why} — recon drone returning.`);
+      soundEngine.speak('Recon drone returning to you.', 'v9');
+    } else if (
+      !e.state.droneReturning &&
+      !e.droneLowWarned &&
+      e.state.droneBattery <= DRONE.lowBattery &&
+      e.state.droneBattery > 0
+    ) {
+      e.droneLowWarned = true;
+      e.setNotification('Drone battery low. Recall soon.');
+    } else if (!e.state.droneReturning && !e.droneRangeWarned && range >= DRONE.rangeWarn) {
+      e.droneRangeWarned = true;
+      e.setNotification('Approaching drone range limit.');
     }
-    if (e.input.left || e.input.analogSteer < -0.2) e.droneRot += 2.8 * dt;
-    if (e.input.right || e.input.analogSteer > 0.2) e.droneRot -= 2.8 * dt;
-    if (e.input.jump) e.dronePos.y = Math.min(35, e.dronePos.y + 12 * dt);
-    if (e.input.sneak) e.dronePos.y = Math.max(1, e.dronePos.y - 12 * dt);
+
+    if (e.state.droneReturning) {
+      const dx = owner.x - e.dronePos.x;
+      const dy = owner.y + 2.4 - e.dronePos.y;
+      const dz = owner.z - e.dronePos.z;
+      const dist = Math.hypot(dx, dy, dz) || 1;
+      const step = Math.min(dist, DRONE.returnSpeed * dt);
+      e.dronePos.x += (dx / dist) * step;
+      e.dronePos.y += (dy / dist) * step;
+      e.dronePos.z += (dz / dist) * step;
+      e.droneRot = Math.atan2(-dx, -dz);
+      if (dist < DRONE.dockDistance) {
+        e.playerActions.dockMiniDrone('Recon drone docked.');
+      }
+    } else {
+      const droneSpeed = 16;
+      if (e.input.forward || e.input.analogThrottle > DRONE.moveInputDeadzone) {
+        e.dronePos.x -= Math.sin(e.droneRot) * droneSpeed * dt;
+        e.dronePos.z -= Math.cos(e.droneRot) * droneSpeed * dt;
+      }
+      if (e.input.backward || e.input.analogThrottle < -DRONE.moveInputDeadzone) {
+        e.dronePos.x += Math.sin(e.droneRot) * droneSpeed * dt;
+        e.dronePos.z += Math.cos(e.droneRot) * droneSpeed * dt;
+      }
+      if (e.input.left || e.input.analogSteer < -DRONE.moveInputDeadzone) e.droneRot += 2.8 * dt;
+      if (e.input.right || e.input.analogSteer > DRONE.moveInputDeadzone) e.droneRot -= 2.8 * dt;
+      if (e.input.jump) e.dronePos.y = Math.min(35, e.dronePos.y + 12 * dt);
+      if (e.input.sneak) e.dronePos.y = Math.max(1, e.dronePos.y - 12 * dt);
+    }
 
     e.miniDrone.group.position.copy(e.dronePos);
     e.miniDrone.group.rotation.y = e.droneRot;
-
-    // Spin drone propellers
-    e.miniDrone.rotors.forEach((r) => (r.rotation.y += 0.8));
+    e.miniDrone.rotors.forEach((r) => {
+      r.rotation.y += 0.8;
+    });
   }
 
   updateTrafficVehicles(dt: number) {

@@ -57,6 +57,8 @@ export interface GameState {
   isRiding: boolean;
   isSilentMode: boolean;
   isMiniDroneActive: boolean;
+  droneBattery: number;
+  droneReturning: boolean;
   isRemoteV9Active: boolean;
   currentDisguise: DisguiseType;
   currentGadget: GadgetType;
@@ -193,6 +195,8 @@ export class GameEngine {
   public dronePos = new THREE.Vector3(-60, 2, -48);
   public droneRot = 0;
   public dronePitch = 0;
+  public droneLowWarned = false;
+  public droneRangeWarned = false;
 
   // Orbit drag & view control (shared with CameraRig)
   /** World-space camera heading — independent of player/bike facing so look-around can stick. */
@@ -293,6 +297,8 @@ export class GameEngine {
       isRiding: true, // Start mounted for immediate fun
       isSilentMode: false,
       isMiniDroneActive: false,
+      droneBattery: 100,
+      droneReturning: false,
       isRemoteV9Active: false,
       currentDisguise: 'agent_suit',
       currentGadget: 'emp',
@@ -638,8 +644,9 @@ export class GameEngine {
     this.worldSystems.updateMuseumAccess();
 
     // 2. Controller Update
+    this.worldSystems.updateMiniDrone(dt);
     if (this.state.isMiniDroneActive) {
-      this.worldSystems.updateMiniDrone(dt);
+      // Pilot the drone; body/bike wait until it docks.
     } else if (this.state.isRiding || this.state.isRemoteV9Active) {
       this.motorcyclePhysics.update(dt);
       if (!this.state.isRiding) {

@@ -3,7 +3,8 @@ import { DisguiseType, GadgetType } from '../types/game';
 import type { GameEngine } from './gameEngine';
 import { raiseStationGate, type WorldObjects } from './world';
 import { soundEngine } from './audio';
-import { STEALTH } from './tunables';
+import { DRONE, STEALTH } from './tunables';
+import { canLaunchDrone } from './dronePower';
 
 /**
  * One-shot player actions triggered by input (keyboard, touch buttons, gamepad-to-come):
@@ -183,17 +184,53 @@ export class PlayerActions {
 
   toggleMiniDrone() {
     const e = this.e;
-    e.state.isMiniDroneActive = !e.state.isMiniDroneActive;
-    e.miniDrone.group.visible = e.state.isMiniDroneActive;
     if (e.state.isMiniDroneActive) {
-      const basePos = e.state.isRiding ? e.bikePos : e.playerPos;
-      e.dronePos.set(basePos.x, basePos.y + 3, basePos.z);
-      e.droneRot = e.state.isRiding ? e.bikeRot : e.playerRot;
-      e.setNotification('Mini Recon Drone deployed! Scan clues & hack relays from above.');
-      soundEngine.speak('Mini drone airborne.', 'v9');
-    } else {
-      e.setNotification('Mini Drone recalled.');
+      if (e.state.droneReturning) {
+        e.setNotification('Recon drone already returning.');
+        return;
+      }
+      const owner = e.state.isRiding ? e.bikePos : e.playerPos;
+      const dist = Math.hypot(e.dronePos.x - owner.x, e.dronePos.z - owner.z);
+      if (dist < DRONE.dockDistance * 1.6) {
+        this.dockMiniDrone('Mini Drone recalled.');
+      } else {
+        e.state.droneReturning = true;
+        e.setNotification('Recon drone returning to you.');
+        soundEngine.speak('Recon drone returning to you.', 'v9');
+      }
+      e.notifyState();
+      return;
     }
+    if (!canLaunchDrone(e.state.droneBattery)) {
+      e.setNotification('Drone battery too low — wait for it to recharge.');
+      soundEngine.speak('Mini drone needs a recharge.', 'v9');
+      e.notifyState();
+      return;
+    }
+    const basePos = e.state.isRiding ? e.bikePos : e.playerPos;
+    e.dronePos.set(basePos.x, basePos.y + 3, basePos.z);
+    e.droneRot = e.state.isRiding ? e.bikeRot : e.playerRot;
+    e.state.isMiniDroneActive = true;
+    e.state.droneReturning = false;
+    e.miniDrone.group.visible = true;
+    e.droneLowWarned = false;
+    e.droneRangeWarned = false;
+    e.setNotification('Mini Recon Drone deployed! Watch the battery and stay in range.');
+    soundEngine.speak('Mini drone airborne.', 'v9');
+    e.notifyState();
+  }
+
+  dockMiniDrone(message = 'Mini Drone recalled.') {
+    const e = this.e;
+    e.state.isMiniDroneActive = false;
+    e.state.droneReturning = false;
+    e.miniDrone.group.visible = false;
+    const owner = e.state.isRiding ? e.bikePos : e.playerPos;
+    e.dronePos.copy(owner);
+    e.dronePos.y += 2;
+    e.droneLowWarned = false;
+    e.droneRangeWarned = false;
+    e.setNotification(message);
     e.notifyState();
   }
 

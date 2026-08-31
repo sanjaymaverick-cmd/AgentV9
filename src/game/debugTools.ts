@@ -119,6 +119,8 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
     refill() {
       e.state.fuelLevel = 100;
       e.state.nitroLevel = 100;
+      e.state.droneBattery = 100;
+      e.state.droneReturning = false;
       e.hasWarnedZeroFuel = false;
       e.lastLowFuelAlertTime = 0;
       e.world.bots.forEach((b) => {
