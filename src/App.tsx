@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GameEngine, GameState } from './game/gameEngine';
 import { VehicleCustomization, DisguiseType, GameSettings, CityPOI } from './types/game';
 import { SaveManager, SaveDataV1, DEFAULT_CUSTOMIZATION } from './game/saveManager';
+import { autoDetectQuality } from './game/quality';
 import { HUD } from './components/HUD';
 import { CustomizerModal } from './components/CustomizerModal';
 import { MissionsModal } from './components/MissionsModal';
@@ -29,7 +30,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   steeringAssist: 0.5,
   timeLimitMinutes: 0,
   touchControls: true,
-  highQualityGraphics: true,
+  qualityLevel: 'medium', // replaced by auto-detect on first launch (see settings init)
   touchControlMode: 'joystick',
   showControlsHelper: true,
 };
@@ -47,12 +48,22 @@ export default function App() {
   );
 
   const [settings, setSettings] = useState<GameSettings>(() => {
+    let stored: Partial<GameSettings> & { highQualityGraphics?: boolean } = {};
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+      if (saved) stored = JSON.parse(saved);
     } catch {
-      return DEFAULT_SETTINGS;
+      /* fall through to defaults */
     }
+    // qualityLevel: honour a stored choice; else migrate the old boolean; else auto-detect.
+    const qualityLevel: GameSettings['qualityLevel'] =
+      stored.qualityLevel ??
+      (typeof stored.highQualityGraphics === 'boolean'
+        ? stored.highQualityGraphics
+          ? 'high'
+          : 'low'
+        : autoDetectQuality());
+    return { ...DEFAULT_SETTINGS, ...stored, qualityLevel };
   });
 
   // Modals state
@@ -124,10 +135,14 @@ export default function App() {
 
   // Handle Settings Update
   const handleUpdateSettings = (newSettings: GameSettings) => {
+    const prev = settings;
     setSettings(newSettings);
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(newSettings));
     if (engineRef.current) {
       engineRef.current.settings = newSettings;
+      if (newSettings.qualityLevel !== prev.qualityLevel) {
+        engineRef.current.applyQuality(newSettings.qualityLevel);
+      }
     }
   };
 

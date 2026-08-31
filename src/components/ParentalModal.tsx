@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ShieldCheck, Clock, Volume2, Compass, HeartHandshake } from 'lucide-react';
+import { X, ShieldCheck, Clock, Volume2, Compass, HeartHandshake, Gauge } from 'lucide-react';
 import { GameSettings } from '../types/game';
 import { soundEngine } from '../game/audio';
 
@@ -114,6 +114,38 @@ export const ParentalModal: React.FC<ParentalModalProps> = ({
                 <span className="text-[11px] text-slate-400">Crisp discrete arrow buttons for easy steering</span>
               </button>
             </div>
+          </div>
+
+          {/* Graphics Quality (spec §26) */}
+          <div>
+            <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2.5">
+              <Gauge className="w-4 h-4 text-cyan-400" /> Graphics Quality
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              {([
+                { level: 'low', label: 'Low', hint: 'Best speed' },
+                { level: 'medium', label: 'Medium', hint: 'Balanced' },
+                { level: 'high', label: 'High', hint: 'Best looks' },
+              ] as const).map((item) => (
+                <button
+                  key={item.level}
+                  onClick={() => onUpdateSettings({ ...settings, qualityLevel: item.level })}
+                  className={`py-2.5 rounded-xl border text-xs font-bold transition cursor-pointer flex flex-col items-center gap-0.5 ${
+                    settings.qualityLevel === item.level
+                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-black shadow-md'
+                      : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  <span className={`text-[10px] font-semibold ${settings.qualityLevel === item.level ? 'text-slate-900/70' : 'text-slate-500'}`}>
+                    {item.hint}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">
+              Auto-picked for this device on first launch — adjust if the ride feels choppy.
+            </p>
           </div>
 
           {/* Steering Assistance Level */}

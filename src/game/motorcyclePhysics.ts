@@ -178,6 +178,7 @@ export class MotorcyclePhysics {
 
   private spawnDriftParticle() {
     const e = this.e;
+    if (e.driftParticles.length >= e.maxDriftParticles) return;
     const geo = new THREE.SphereGeometry(0.12, 6, 6);
     const mat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? '#38bdf8' : '#00f2fe' });
     const p = new THREE.Mesh(geo, mat);

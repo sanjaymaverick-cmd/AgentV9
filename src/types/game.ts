@@ -143,6 +143,8 @@ export interface NPCLocal {
 
 export type CameraMode = 'chase' | 'action' | 'fpv' | 'tactical';
 
+export type QualityLevel = 'low' | 'medium' | 'high';
+
 export interface GameSettings {
   soundVolume: number;
   musicVolume: number;
@@ -151,7 +153,7 @@ export interface GameSettings {
   timeLimitMinutes: number; // 0 for infinite, parental timer
   touchControls: boolean;
   touchControlMode: 'joystick' | 'dpad';
-  highQualityGraphics: boolean;
+  qualityLevel: QualityLevel; // LOW / MEDIUM / HIGH graphics preset (spec §26)
   showControlsHelper: boolean;
 }
 

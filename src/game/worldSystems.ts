@@ -366,7 +366,7 @@ export class WorldSystems {
 
   spawnRefuelParticle(fromPos: [number, number, number], toPos: THREE.Vector3) {
     const e = this.e;
-    if (e.refuelParticles.length > 25) return;
+    if (e.refuelParticles.length >= e.maxRefuelParticles) return;
     const geo = new THREE.SphereGeometry(0.14, 6, 6);
     const mat = new THREE.MeshBasicMaterial({
       color: Math.random() < 0.6 ? '#10b981' : '#00f2fe',

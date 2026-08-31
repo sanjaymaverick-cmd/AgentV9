@@ -12,7 +12,8 @@ import {
   CityPOI,
   GPSRoute,
   NPCLocal,
-  RadarEntity
+  RadarEntity,
+  QualityLevel
 } from '../types/game';
 import { 
   createV9Motorcycle, 
@@ -43,6 +44,7 @@ import { PlayerActions } from './playerActions';
 import { NPCDialogue } from './npcDialogue';
 import { GamepadInput } from './gamepadInput';
 import { SaveController } from './saveController';
+import { QualityPreset, QUALITY_PRESETS } from './quality';
 
 export interface GameState {
   isRiding: boolean;
@@ -215,6 +217,11 @@ export class GameEngine {
    */
   public debug: DebugTools | null = null;
 
+  // Active graphics preset (spec §26). Particle spawners read the caps below.
+  public currentQuality: QualityPreset = QUALITY_PRESETS.medium;
+  public maxDriftParticles = QUALITY_PRESETS.medium.maxDriftParticles;
+  public maxRefuelParticles = QUALITY_PRESETS.medium.maxRefuelParticles;
+
   // Extracted subsystems — constructed in initWorld() once handles exist.
   private motorcyclePhysics!: MotorcyclePhysics;
   public stealthAI!: StealthAI;
@@ -302,6 +309,7 @@ export class GameEngine {
     container.appendChild(this.renderer.domElement);
 
     this.initWorld();
+    this.applyQuality(this.settings.qualityLevel, false);
     this.engineInput.attach();
     this.gamepadInput.attach();
     this.cameraRig.attachPointerControls();
@@ -442,6 +450,45 @@ export class GameEngine {
     this.scene.add(this.agentChar.group);
 
     this.requestAutosave();
+  }
+
+  /**
+   * Apply a graphics quality preset (spec §26). Safe to call at any time — it retunes
+   * the renderer, shadows, draw distance / fog, particle caps and hides surplus
+   * autonomous agents. Does NOT persist; App.tsx owns the settings write.
+   */
+  public applyQuality(level: QualityLevel, notify = true) {
+    const q = QUALITY_PRESETS[level];
+    this.currentQuality = q;
+    this.maxDriftParticles = q.maxDriftParticles;
+    this.maxRefuelParticles = q.maxRefuelParticles;
+
+    // Renderer
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatioCap));
+    this.renderer.shadowMap.enabled = q.shadows;
+
+    // Shadows — force the shadow map to rebuild at the new resolution.
+    const sun = this.world.sunLight;
+    sun.castShadow = q.shadows;
+    sun.shadow.mapSize.set(q.shadowMapSize, q.shadowMapSize);
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+
+    // Draw distance + fog
+    this.camera.far = q.drawDistance;
+    this.camera.updateProjectionMatrix();
+    if (this.scene.fog instanceof THREE.FogExp2) {
+      this.scene.fog.density = q.fogDensity;
+    }
+
+    // Trim autonomous agents (slice only spawns 4 of each — hide the surplus).
+    this.world.trafficVehicles.forEach((v, i) => (v.obj.visible = i < q.trafficCount));
+    let peds = 0;
+    this.world.npcLocals.forEach((n) => {
+      if (n.isPedestrian) n.obj.visible = peds++ < q.pedestrianCount;
+    });
+
+    if (notify) this.setNotification(`Graphics: ${level.toUpperCase()}`);
   }
 
   // ---------------------------------------------------

@@ -64,6 +64,7 @@ export interface WorldObjects {
   cityPOIs: CityPOI[];
   museumLaserGate: THREE.Mesh;
   stationCraneGate: THREE.Mesh;
+  sunLight: THREE.DirectionalLight; // exposed so quality presets can retune shadows
 }
 
 export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
@@ -1006,6 +1007,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     cityPOIs,
     museumLaserGate: laserGate,
     stationCraneGate: craneGate,
+    sunLight,
   };
 }
 

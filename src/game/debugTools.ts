@@ -28,6 +28,7 @@ interface Internals {
   state: GameEngine['state'];
   renderer: GameEngine['renderer'];
   settings: GameEngine['settings'];
+  applyQuality: GameEngine['applyQuality'];
   bikePos: THREE.Vector3;
   playerPos: THREE.Vector3;
   dronePos: THREE.Vector3;
@@ -163,20 +164,7 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
     },
 
     setRenderQuality(level) {
-      const dpr = window.devicePixelRatio || 1;
-      if (level === 'low') {
-        e.renderer.setPixelRatio(Math.min(dpr, 0.75));
-        e.renderer.shadowMap.enabled = false;
-      } else if (level === 'medium') {
-        e.renderer.setPixelRatio(Math.min(dpr, 1));
-        e.renderer.shadowMap.enabled = true;
-      } else {
-        e.renderer.setPixelRatio(Math.min(dpr, 2));
-        e.renderer.shadowMap.enabled = true;
-      }
-      e.renderer.shadowMap.needsUpdate = true;
-      e.settings.highQualityGraphics = level !== 'low';
-      e.setNotification(`[debug] Render quality: ${level.toUpperCase()}`);
+      e.applyQuality(level);
       e.notifyState();
     },
   };
