@@ -492,92 +492,189 @@ export function createAcademyHQ(): THREE.Group {
   return group;
 }
 
-export function createTechMuseum(): THREE.Group {
+export interface MuseumBuild {
+  group: THREE.Group;
+  interiorColliders: THREE.Box3[];
+  staffDoor: { mesh: THREE.Mesh; box: THREE.Box3; open: boolean };
+  laserBox: THREE.Box3;
+  staffRoom: { minX: number; maxX: number; minZ: number; maxZ: number };
+}
+
+/**
+ * Enterable museum (spec §3 / C5). Hollow hall + staff/security room.
+ * South doors are public. Staff door is disguise-gated. North laser covers the dock.
+ * East wall has a vent hole for the Speed roof-jump.
+ */
+export function createTechMuseum(): MuseumBuild {
   const group = new THREE.Group();
   group.name = 'Tech_Museum';
-  group.position.set(0, 0, -85);
+  const origin = new THREE.Vector3(0, 0, -85);
+  group.position.copy(origin);
 
+  const colliders: THREE.Box3[] = [];
   const facade = createFacadeTexture('office', 4);
-  const matX = facadeMaterial(facade, 4, 2);
-  const matZ = facadeMaterial(facade, 5, 2);
+  const wallMat = facadeMaterial(facade, 3, 2);
   const stone = new THREE.MeshStandardMaterial({ color: '#475569', metalness: 0.35, roughness: 0.45 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.7, metalness: 0.25 });
   const glass = new THREE.MeshStandardMaterial({
     color: '#7dd3fc',
     emissive: '#0369a1',
-    emissiveIntensity: 0.3,
+    emissiveIntensity: 0.25,
     metalness: 0.8,
-    roughness: 0.1,
+    roughness: 0.12,
     transparent: true,
-    opacity: 0.65,
+    opacity: 0.45,
   });
   const cyan = new THREE.MeshBasicMaterial({ color: '#38bdf8' });
+  const crateMat = new THREE.MeshStandardMaterial({ color: '#78716c', metalness: 0.3, roughness: 0.6 });
+  const doorMat = new THREE.MeshStandardMaterial({
+    color: '#0ea5e9',
+    emissive: '#0369a1',
+    emissiveIntensity: 0.4,
+    metalness: 0.5,
+    roughness: 0.3,
+    transparent: true,
+    opacity: 0.85,
+  });
 
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(42, 1.1, 36), stone);
-  plinth.position.y = 0.55;
-  plinth.receiveShadow = true;
-  group.add(plinth);
+  const addWall = (lx: number, ly: number, lz: number, w: number, h: number, d: number, mat: THREE.Material) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(lx, ly, lz);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    colliders.push(
+      new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(lx, ly, lz).add(origin), new THREE.Vector3(w, h, d))
+    );
+    return mesh;
+  };
 
-  const hall = new THREE.Mesh(new THREE.BoxGeometry(38, 10, 32), [matX, matX, roofMaterial(), darkMat(), matZ, matZ]);
-  hall.position.y = 6.1;
-  hall.castShadow = true;
-  hall.receiveShadow = true;
-  group.add(hall);
+  // Floor + ceiling (no collider — walk on the ground plane)
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(34, 0.18, 30), floorMat);
+  floor.position.set(0, 0.09, -2);
+  floor.receiveShadow = true;
+  group.add(floor);
+  const ceiling = new THREE.Mesh(new THREE.BoxGeometry(34, 0.28, 30), roofMaterial());
+  ceiling.position.set(0, 7.7, -2);
+  group.add(ceiling);
 
-  const ribbon = new THREE.Mesh(new THREE.BoxGeometry(36, 2.4, 0.2), cyan);
-  ribbon.position.set(0, 8.2, 16.15);
-  group.add(ribbon);
+  const H = 7.6;
+  const T = 0.7;
+  // West / east walls (east has a vent hole at z=-3, y=3.5–6)
+  addWall(-17.15, H / 2, -2, T, H, 30, wallMat);
+  addWall(17.15, H / 2, -11, T, H, 12, wallMat); // east north of vent
+  addWall(17.15, 1.5, -3, T, 3, 6, wallMat); // east below vent
+  addWall(17.15, 6.8, -3, T, 1.6, 6, wallMat); // east above vent
+  addWall(17.15, H / 2, 8, T, H, 10, wallMat); // east south of vent
 
-  // South colonnade (faces downtown / plaza)
+  // South wall with public doorway (8m)
+  addWall(-11, H / 2, 12.65, 12, H, T, wallMat);
+  addWall(11, H / 2, 12.65, 12, H, T, wallMat);
+  addWall(0, 6.2, 12.65, 8, 2.8, T, wallMat); // lintel
+
+  // North wall with laser bay (8m)
+  addWall(-11, H / 2, -16.65, 12, H, T, wallMat);
+  addWall(11, H / 2, -16.65, 12, H, T, wallMat);
+  addWall(0, 6.2, -16.65, 8, 2.8, T, wallMat);
+
+  // Staff partition (disguise door in the middle)
+  addWall(-10.5, H / 2, -5, 13, H, T, wallMat);
+  addWall(10.5, H / 2, -5, 13, H, T, wallMat);
+  addWall(0, 6.1, -5, 8, 3, T, wallMat);
+
+  const staffDoorMesh = new THREE.Mesh(new THREE.BoxGeometry(6.2, 4.2, 0.18), doorMat);
+  staffDoorMesh.position.set(0, 2.1, -5);
+  group.add(staffDoorMesh);
+  const staffDoorBox = new THREE.Box3().setFromCenterAndSize(
+    new THREE.Vector3(0, 2.1, -5).add(origin),
+    new THREE.Vector3(6.2, 4.2, 0.5)
+  );
+
+  // Dock canopy (open north + south into the laser)
+  addWall(-8.2, 3, -22.5, T, 6, 12, wallMat);
+  addWall(8.2, 3, -22.5, T, 6, 12, wallMat);
+  const dockRoof = new THREE.Mesh(new THREE.BoxGeometry(17, 0.4, 13), roofMaterial());
+  dockRoof.position.set(0, 6.1, -22.5);
+  group.add(dockRoof);
+  const stripe = new THREE.Mesh(
+    new THREE.BoxGeometry(16.6, 0.35, 12.6),
+    new THREE.MeshBasicMaterial({ color: '#eab308' })
+  );
+  stripe.position.set(0, 6.25, -22.5);
+  group.add(stripe);
+
+  const laserBox = new THREE.Box3().setFromCenterAndSize(
+    new THREE.Vector3(0, 2, -16.7).add(origin),
+    new THREE.Vector3(8, 4.2, 0.6)
+  );
+
+  // South colonnade
   for (let i = -2; i <= 2; i++) {
-    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 8.5, 8), stone);
-    col.position.set(i * 6.2, 5.3, 17.6);
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 7.2, 8), stone);
+    col.position.set(i * 5.6, 3.6, 16.4);
     col.castShadow = true;
     group.add(col);
   }
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(28, 0.7, 2.2), stone);
-  lintel.position.set(0, 9.7, 17.6);
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(26, 0.55, 2), stone);
+  lintel.position.set(0, 7.4, 16.4);
   group.add(lintel);
-
   const sign = new THREE.Mesh(
     new THREE.PlaneGeometry(16, 2),
     new THREE.MeshBasicMaterial({ map: createSignTexture('TECH MUSEUM', '#0f172a', '#7dd3fc') })
   );
-  sign.position.set(0, 11.2, 18.8);
+  sign.position.set(0, 9.6, 17.6);
   group.add(sign);
 
-  const pyramid = new THREE.Mesh(new THREE.ConeGeometry(13, 11, 4), glass);
+  const pyramid = new THREE.Mesh(new THREE.ConeGeometry(12, 10, 4), glass);
   pyramid.geometry.rotateY(Math.PI / 4);
-  pyramid.position.y = 16.4;
+  pyramid.position.set(0, 13.2, -2);
   group.add(pyramid);
-  const glow = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), cyan);
-  glow.position.y = 12.5;
-  group.add(glow);
 
-  // Loading dock (north)
-  const dock = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 12), [
-    facadeMaterial(createFacadeTexture('industrial', 8), 2, 1),
-    facadeMaterial(createFacadeTexture('industrial', 8), 2, 1),
-    roofMaterial(),
-    darkMat(),
-    facadeMaterial(createFacadeTexture('industrial', 8), 2, 1),
-    facadeMaterial(createFacadeTexture('industrial', 8), 2, 1),
-  ]);
-  dock.position.set(0, 3, -22);
-  dock.castShadow = true;
-  group.add(dock);
-  const stripe = new THREE.Mesh(
-    new THREE.BoxGeometry(16.2, 0.5, 12.2),
-    new THREE.MeshBasicMaterial({ color: '#eab308' })
-  );
-  stripe.position.set(0, 5.9, -22);
-  group.add(stripe);
-  for (let i = -1; i <= 1; i++) {
-    const bay = new THREE.Mesh(new THREE.BoxGeometry(3.6, 3.4, 0.12), new THREE.MeshBasicMaterial({ color: '#111827' }));
-    bay.position.set(i * 4.4, 2.2, -28.05);
-    group.add(bay);
-  }
+  const ribbon = new THREE.Mesh(new THREE.BoxGeometry(20, 1.6, 0.18), cyan);
+  ribbon.position.set(0, 5.6, 13.1);
+  group.add(ribbon);
 
-  return group;
+  // Public exhibits
+  (
+    [
+      [-8, 8],
+      [8, 8],
+      [0, 4],
+    ] as [number, number][]
+  ).forEach(([x, z]) => {
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 1.1, 10), stone);
+    ped.position.set(x, 0.55, z);
+    group.add(ped);
+    const art = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), cyan);
+    art.position.set(x, 1.5, z);
+    group.add(art);
+  });
+
+  // Staff-room crates (cover)
+  (
+    [
+      [-8, -12],
+      [8, -12],
+      [-6, -9],
+    ] as [number, number][]
+  ).forEach(([x, z]) => {
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 1.8), crateMat);
+    crate.position.set(x, 0.8, z);
+    crate.castShadow = true;
+    group.add(crate);
+  });
+
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(20, 0.08, 0.18), cyan);
+  strip.position.set(0, 6.4, -5);
+  group.add(strip);
+
+  return {
+    group,
+    interiorColliders: colliders,
+    staffDoor: { mesh: staffDoorMesh, box: staffDoorBox, open: false },
+    laserBox,
+    staffRoom: { minX: -15, maxX: 15, minZ: -102, maxZ: -90 },
+  };
 }
 
 export function createCargoStation(): THREE.Group {

@@ -130,7 +130,11 @@ export class SaveController {
       if (w.hackedTerminalIds.includes(t.id)) {
         t.hacked = true;
         (t.mesh.children[0] as THREE.Mesh).material = new THREE.MeshBasicMaterial({ color: '#22c55e' });
-        if (t.id === 'term_museum_dock') e.world.museumLaserGate.visible = false;
+        if (t.id === 'term_museum_dock') {
+          e.world.museumLaserGate.visible = false;
+          e.world.museumStaffDoor.open = true;
+          e.world.museumStaffDoor.mesh.visible = false;
+        }
         if (t.id === 'term_station_crane') e.world.stationCraneGate.position.y += 6;
       }
     });

@@ -599,6 +599,8 @@ export class GameEngine {
     // 1. Update Projectiles & Foam
     this.worldSystems.updateProjectiles(dt);
 
+    this.worldSystems.updateMuseumAccess();
+
     // 2. Controller Update
     if (this.state.isMiniDroneActive) {
       this.worldSystems.updateMiniDrone(dt);

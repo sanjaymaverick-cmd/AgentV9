@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { NPCLocal } from '../types/game';
 import type { GameEngine } from './gameEngine';
-import type { WorldObjects } from './world';
+import { gatherInteriorBoxes, type WorldObjects } from './world';
+import { resolveCircleAabbs } from './collision';
 import { soundEngine } from './audio';
 
 /**
@@ -67,9 +68,22 @@ export class WorldSystems {
       }
     }
 
+    resolveCircleAabbs(e.playerPos, 0.55, gatherInteriorBoxes(e.world));
+
     e.agentChar.group.position.copy(e.playerPos);
     e.agentChar.group.rotation.y = e.playerRot;
     e.agentChar.group.scale.y = e.isCrouching ? 0.7 : 1;
+  }
+
+  updateMuseumAccess() {
+    const e = this.e;
+    const door = e.world.museumStaffDoor;
+    if (!door) return;
+    const zone = e.world.restrictedZones.find((z) => z.id === 'museum_dock');
+    const allowed = !!zone && zone.allowedDisguises.includes(e.state.currentDisguise);
+    const hacked = e.world.terminals.some((t) => t.id === 'term_museum_dock' && t.hacked);
+    door.open = allowed || hacked;
+    door.mesh.visible = !door.open;
   }
 
   updateMiniDrone(dt: number) {

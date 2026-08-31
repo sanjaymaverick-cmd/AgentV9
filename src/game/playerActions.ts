@@ -287,7 +287,9 @@ export class PlayerActions {
 
     if (term.id === 'term_museum_dock') {
       e.world.museumLaserGate.visible = false;
-      e.setNotification('Museum Security Laser Gate Deactivated! Loading dock unlocked.');
+      e.world.museumStaffDoor.open = true;
+      e.world.museumStaffDoor.mesh.visible = false;
+      e.setNotification('Museum security unlocked — staff door and dock laser are down.');
       e.checkMissionStepComplete('step_2_scan_dock', 'smarts');
     } else if (term.id === 'term_station_crane') {
       e.world.stationCraneGate.position.y += 6;

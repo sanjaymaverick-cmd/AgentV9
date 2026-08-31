@@ -21,12 +21,12 @@ export const STORY_MISSION_MIDNIGHT_PROTOTYPE: Mission = {
     {
       id: 'step_2_scan_dock',
       title: 'Scan the Loading Dock',
-      instruction: 'Investigate the loading dock behind the museum to discover how CHAOS breached security.',
-      targetPosition: [0, 1, -102],
+      instruction: 'Enter the museum and scan the staff loading room for the CHAOS breach.',
+      targetPosition: [0, 1, -94],
       approachHint: {
-        speed: 'Drift behind the museum and zoom straight to the loading bay!',
-        stealth: 'Climb the side ladder to the roof vent and peek down.',
-        smarts: 'Deploy your Mini Recon Drone to scan the laser terminal from above.',
+        speed: 'Boost the east vent ramp and jump in through the wall hole — or smash the north dock if the laser is down!',
+        stealth: 'Grab a tech/scientist disguise and walk through the glowing staff door.',
+        smarts: 'Hack the exhibit-hall terminal to drop the laser and the staff door.',
       },
       completed: false,
     },

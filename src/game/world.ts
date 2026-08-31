@@ -106,6 +106,10 @@ export interface WorldObjects {
   npcLocals: NPCObject[];
   cityPOIs: CityPOI[];
   museumLaserGate: THREE.Mesh;
+  museumLaserBox: THREE.Box3;
+  museumStaffDoor: { mesh: THREE.Mesh; box: THREE.Box3; open: boolean };
+  museumStaffRoom: { minX: number; maxX: number; minZ: number; maxZ: number };
+  interiorColliders: THREE.Box3[];
   stationCraneGate: THREE.Mesh;
   sunLight: THREE.DirectionalLight; // exposed so quality presets can retune shadows
 }
@@ -438,15 +442,22 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   colliders.push(buildingCollider(-80, -50, 34, 28, 14));
   colliders.push(buildingCollider(-80, -50, 18, 18, 62));
 
-  // B. Technology Museum (North District)
-  scene.add(createTechMuseum());
-  colliders.push(buildingCollider(0, -85, 38, 32, 10));
-  colliders.push(buildingCollider(0, -107, 16, 12, 6));
+  // B. Technology Museum — hollow enterable hall (C5)
+  const museum = createTechMuseum();
+  scene.add(museum.group);
+  const interiorColliders = museum.interiorColliders;
+  const museumStaffDoor = museum.staffDoor;
+  const museumStaffRoom = museum.staffRoom;
+  const museumLaserBox = museum.laserBox;
 
   const laserGate = new THREE.Mesh(new THREE.PlaneGeometry(8, 4), new THREE.MeshBasicMaterial({ color: '#ef4444', transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
-  laserGate.position.set(0, 2, -101);
+  laserGate.position.set(0, 2, -101.7);
   laserGate.name = 'MuseumLaserGate';
   scene.add(laserGate);
+
+  const ventRamp = createStuntRamp([24, 0, -85], Math.PI / 2, 1.2);
+  scene.add(ventRamp.mesh);
+  stuntRamps.push(ventRamp);
 
   // C. Monorail Cargo Station
   scene.add(createCargoStation());
@@ -571,7 +582,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   // 9. DISGUISE LOCKERS & SECURITY TERMINALS
   // ---------------------------------------------------
   const lockerDefs: { id: string; disguise: string; pos: [number, number, number] }[] = [
-    { id: 'locker_tech', disguise: 'maintenance_tech', pos: [-12, 1, -95] },
+    { id: 'locker_tech', disguise: 'maintenance_tech', pos: [-14, 1, -76] },
     { id: 'locker_courier', disguise: 'delivery_worker', pos: [-55, 1, -45] },
     { id: 'locker_science', disguise: 'lab_scientist', pos: [14, 1, -75] },
     { id: 'locker_race', disguise: 'race_crew', pos: [70, 1, 10] },
@@ -585,7 +596,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   });
 
   const terminalDefs: { id: string; name: string; pos: [number, number, number] }[] = [
-    { id: 'term_museum_dock', name: 'Museum Laser Security Terminal', pos: [-8, 0.8, -100] },
+    { id: 'term_museum_dock', name: 'Museum Laser Security Terminal', pos: [-10, 0.8, -76] },
     { id: 'term_station_crane', name: 'Cargo Gantry Crane Console', pos: [78, 0.8, 8] },
     { id: 'term_city_decoy', name: 'Plaza Hologram Projector Node', pos: [8, 0.8, 12] },
   ];
@@ -664,6 +675,21 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       trappedByFoamUntil: 0,
       zoneId: 'station_cargo',
     },
+    {
+      id: 'bot_museum_3',
+      type: 'guard_bot',
+      name: 'CHAOS Interior Sentinel',
+      position: [0, 0, -94],
+      rotation: 0,
+      patrolPoints: [[-8, 0, -94], [8, 0, -94]],
+      currentPatrolIndex: 0,
+      viewAngle: 70,
+      viewDistance: 7,
+      alertLevel: 0,
+      disabledUntil: 0,
+      trappedByFoamUntil: 0,
+      zoneId: 'museum_dock',
+    },
   ];
 
   botDefs.forEach((bData) => {
@@ -701,6 +727,10 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     [75, 0, 20],
     [85, 0, 10],
     [70, 0, 10],
+    [0, 0, -76],
+    [0, 0, -94],
+    [-10, 0, -94],
+    [10, 0, -94],
   ];
 
   // Sweeping security cameras (spec §12). L2 CHAOS enhances range/sweep — see ChaosAlertManager.
@@ -708,6 +738,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   const cameraDefs: { id: string; pos: [number, number, number]; yaw: number; sweep: number }[] = [
     { id: 'cam_museum_front', pos: [8, 4.6, -68], yaw: Math.PI, sweep: 0.85 },
     { id: 'cam_museum_dock', pos: [7, 4.2, -99], yaw: 0, sweep: 0.7 },
+    { id: 'cam_museum_hall', pos: [0, 4.8, -80], yaw: 0, sweep: 0.9 },
     { id: 'cam_station', pos: [78, 5.2, 12], yaw: Math.PI / 2, sweep: 0.75 },
     { id: 'cam_plaza', pos: [14, 5.0, 10], yaw: -2.3, sweep: 0.9 },
   ];
@@ -1157,9 +1188,20 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     npcLocals,
     cityPOIs,
     museumLaserGate: laserGate,
+    museumLaserBox,
+    museumStaffDoor,
+    museumStaffRoom,
+    interiorColliders,
     stationCraneGate: craneGate,
     sunLight,
   };
+}
+
+export function gatherInteriorBoxes(world: WorldObjects): THREE.Box3[] {
+  const boxes = world.interiorColliders.slice();
+  if (world.museumLaserGate.visible) boxes.push(world.museumLaserBox);
+  if (!world.museumStaffDoor.open) boxes.push(world.museumStaffDoor.box);
+  return boxes;
 }
 
 function createStuntRamp(pos: [number, number, number], rotY: number, boostForce: number) {

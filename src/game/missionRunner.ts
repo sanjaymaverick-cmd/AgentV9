@@ -5,6 +5,7 @@ import type { GameEngine } from './gameEngine';
 import { soundEngine } from './audio';
 import { MISSION } from './tunables';
 import { STORY_MISSION_MIDNIGHT_PROTOTYPE } from './missionEngine';
+import { pointInAabb } from './collision';
 
 /**
  * Story mission runner (spec §10, §18) — advances "The Midnight Prototype" by checking
@@ -82,9 +83,12 @@ export class MissionRunner {
       soundEngine.speak('You reached the museum. Scan the rear loading dock.', 'kira');
     }
 
-    // Step 2: Scan Loading Dock
-    if (mission.currentStepIndex === 1 && distToObjective < MISSION.step2ScanDist) {
-      this.checkStep('step_2_scan_dock', 'stealth');
+    // Step 2: scan the staff loading room (must actually get inside)
+    if (mission.currentStepIndex === 1 && pointInAabb(pPos.x, pPos.z, e.world.museumStaffRoom)) {
+      const zone = e.world.restrictedZones.find((z) => z.id === 'museum_dock');
+      const disguised = !!zone && zone.allowedDisguises.includes(e.state.currentDisguise);
+      const path = e.state.isRiding ? 'speed' : disguised ? 'stealth' : 'smarts';
+      this.checkStep('step_2_scan_dock', path);
       e.state.radioMessage = {
         sender: 'Agent Kira (HQ)',
         text: 'Signal locked! A CHAOS transport drone just took off heading toward the Monorail Station! Pursue it!',

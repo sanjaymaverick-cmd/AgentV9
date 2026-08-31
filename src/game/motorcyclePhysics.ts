@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { GameEngine } from './gameEngine';
 import { soundEngine } from './audio';
 import { BIKE } from './tunables';
+import { resolveCircleAabbs } from './collision';
+import { gatherInteriorBoxes } from './world';
 
 /**
  * V9 motorcycle arcade physics (spec §5).
@@ -146,6 +148,8 @@ export class MotorcyclePhysics {
     const forwardZ = -Math.cos(e.bikeRot) * e.bikeSpeed * dt;
     e.bikePos.x += forwardX;
     e.bikePos.z += forwardZ;
+
+    resolveCircleAabbs(e.bikePos, 1.15, gatherInteriorBoxes(e.world));
 
     // Check Stunt Ramps Collision
     const bikeBox = new THREE.Box3().setFromCenterAndSize(e.bikePos, new THREE.Vector3(1.5, 1.5, 2.5));
