@@ -31,30 +31,68 @@ const btn =
   'text-[11px] font-bold uppercase tracking-wide transition cursor-pointer disabled:opacity-40 ' +
   'disabled:cursor-not-allowed';
 
+interface Perf {
+  fps: number;
+  minFps: number; // rolling worst over ~5s
+  frameMs: number; // worst frame in the last window
+  calls: number; // draw calls
+  tris: number; // triangles
+  geometries: number;
+  textures: number;
+  programs: number;
+  heapMB: number | null;
+}
+
 export default function DebugMenu({ engine, state, onClose }: DebugMenuProps) {
-  const [fps, setFps] = useState(0);
-  const [heapMB, setHeapMB] = useState<number | null>(null);
+  const [perf, setPerf] = useState<Perf>({
+    fps: 0, minFps: 0, frameMs: 0, calls: 0, tris: 0,
+    geometries: 0, textures: 0, programs: 0, heapMB: null,
+  });
   const [teleportPoiId, setTeleportPoiId] = useState('');
 
-  // Lightweight FPS + heap sampler — dev-only, so the extra rAF loop is acceptable.
-  const frameRef = useRef({ count: 0, last: performance.now(), raf: 0 });
+  // Perf sampler — dev-only, so the extra rAF loop is acceptable. Reads renderer.info
+  // for GPU-side load; the on-device numbers here are what B4 profiling acts on.
+  const frameRef = useRef({ count: 0, last: performance.now(), prev: performance.now(), worstMs: 0, minFps: 999 });
   useEffect(() => {
+    let raf = 0;
     const tick = () => {
       const f = frameRef.current;
-      f.count++;
       const now = performance.now();
+      const dtMs = now - f.prev;
+      f.prev = now;
+      if (dtMs > f.worstMs) f.worstMs = dtMs;
+      f.count++;
+
       if (now - f.last >= 500) {
-        setFps(Math.round((f.count * 1000) / (now - f.last)));
+        const fps = Math.round((f.count * 1000) / (now - f.last));
+        f.minFps = Math.min(f.minFps, fps);
+        const info = engine.renderer.info;
+        const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+        setPerf({
+          fps,
+          minFps: f.minFps === 999 ? fps : f.minFps,
+          frameMs: Math.round(f.worstMs * 10) / 10,
+          calls: info.render.calls,
+          tris: info.render.triangles,
+          geometries: info.memory.geometries,
+          textures: info.memory.textures,
+          programs: info.programs?.length ?? 0,
+          heapMB: mem ? Math.round(mem.usedJSHeapSize / 1048576) : null,
+        });
         f.count = 0;
         f.last = now;
-        const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
-        if (mem) setHeapMB(Math.round(mem.usedJSHeapSize / 1048576));
+        f.worstMs = 0;
       }
-      f.raf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(tick);
     };
-    frameRef.current.raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameRef.current.raf);
-  }, []);
+    raf = requestAnimationFrame(tick);
+    // Reset the rolling minimum every 5s so a one-off hitch doesn't stick forever.
+    const resetId = window.setInterval(() => (frameRef.current.minFps = 999), 5000);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearInterval(resetId);
+    };
+  }, [engine]);
 
   const mission = state.activeMission;
   const pois = state.allCityPOIs ?? [];
@@ -77,14 +115,17 @@ export default function DebugMenu({ engine, state, onClose }: DebugMenuProps) {
       </div>
 
       <div className="p-3 space-y-3 text-[11px]">
-        {/* Perf readout */}
-        <div className="flex gap-3 font-mono text-slate-300">
-          <span>
-            FPS <b className={fps && fps < 30 ? 'text-red-400' : 'text-emerald-400'}>{fps || '–'}</b>
-          </span>
-          <span>
-            HEAP <b className="text-cyan-300">{heapMB != null ? `${heapMB}MB` : 'n/a'}</b>
-          </span>
+        {/* Perf readout (B4) */}
+        <div className="font-mono text-[10px] text-slate-300 grid grid-cols-3 gap-x-3 gap-y-0.5 bg-slate-900/60 rounded-md p-1.5">
+          <span>FPS <b className={perf.fps && perf.fps < 30 ? 'text-red-400' : 'text-emerald-400'}>{perf.fps || '–'}</b></span>
+          <span>min <b className={perf.minFps && perf.minFps < 30 ? 'text-red-400' : 'text-amber-300'}>{perf.minFps || '–'}</b></span>
+          <span>{perf.frameMs || '–'}ms</span>
+          <span>draws <b className="text-cyan-300">{perf.calls}</b></span>
+          <span className="col-span-2">tris <b className="text-cyan-300">{(perf.tris / 1000).toFixed(0)}k</b></span>
+          <span>geo {perf.geometries}</span>
+          <span>tex {perf.textures}</span>
+          <span>prog {perf.programs}</span>
+          <span className="col-span-3">heap <b className="text-cyan-300">{perf.heapMB != null ? `${perf.heapMB}MB` : 'n/a'}</b></span>
         </div>
 
         {/* Mission stage */}

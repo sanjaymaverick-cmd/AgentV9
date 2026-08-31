@@ -39,5 +39,7 @@
     <!-- Permissions: none. The game is fully offline (hard constraint #1) and collects
          nothing, so even INTERNET (added by the Capacitor template) is removed. Release
          builds serve the bundle from the local asset scheme and make zero network calls.
-         Note: `npx cap run android --livereload` needs INTERNET and won't work without it. -->
+         Note: the Capacitor live-reload dev workflow needs INTERNET and will not work
+         against this manifest. -->
+
 </manifest>
