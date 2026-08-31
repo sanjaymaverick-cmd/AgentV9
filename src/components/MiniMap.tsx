@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import * as THREE from 'three';
-import { GameState } from '../game/gameEngine';
+import type { GameState } from '../game/gameEngine';
 import { RadarEntity } from '../types/game';
 import { Compass, ZoomIn, ZoomOut, Navigation, Radio, ShieldAlert, Zap, Cpu, Car, MapPin, User, Fuel, Flag } from 'lucide-react';
 
+interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
 interface MiniMapProps {
-  playerPos: THREE.Vector3;
+  playerPos: Vec3;
   playerRot: number;
-  bikePos: THREE.Vector3;
+  bikePos: Vec3;
   targetPos?: [number, number, number];
   isRiding: boolean;
   state: GameState;
@@ -165,7 +170,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     );
   };
 
-  const northAngleDeg = radarMode === 'heading' ? THREE.MathUtils.radToDeg(activeHeading) : 0;
+  const northAngleDeg = radarMode === 'heading' ? (activeHeading * 180) / Math.PI : 0;
 
   return (
     <div className="relative flex flex-col items-center select-none group pointer-events-auto">

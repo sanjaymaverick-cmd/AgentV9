@@ -352,7 +352,7 @@ export class GameEngine {
       // Dev-only: lets canvas.toDataURL capture a frame. Production keeps the default (false).
       preserveDrawingBuffer: !!import.meta.env.DEV,
     });
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
+    this.renderer.setSize(Math.max(1, container.clientWidth || 1280), Math.max(1, container.clientHeight || 720));
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.18;

@@ -17,7 +17,7 @@ import {
   Fuel,
   BatteryCharging
 } from 'lucide-react';
-import { GameEngine, EngineButtonInput } from '../game/gameEngine';
+import type { GameEngine, EngineButtonInput } from '../game/gameEngine';
 import { GameSettings } from '../types/game';
 
 interface TouchControlsProps {

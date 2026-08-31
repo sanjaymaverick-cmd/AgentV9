@@ -1,18 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
-import { GameEngine, GameState } from './game/gameEngine';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import type { GameEngine, GameState } from './game/gameEngine';
 import { VehicleCustomization, DisguiseType, GameSettings, CityPOI } from './types/game';
 import { SaveManager, SaveDataV1, DEFAULT_CUSTOMIZATION } from './game/saveManager';
 import { autoDetectQuality } from './game/quality';
 import { HUD } from './components/HUD';
-import { CustomizerModal } from './components/CustomizerModal';
-import { MissionsModal } from './components/MissionsModal';
-import { ParentalModal } from './components/ParentalModal';
-import { WalkthroughModal } from './components/WalkthroughModal';
-import { MapExplorerModal } from './components/MapExplorerModal';
-import { NPCDialogueModal } from './components/NPCDialogueModal';
 import { TouchControls } from './components/TouchControls';
 import { soundEngine } from './game/audio';
+
+const CustomizerModal = lazy(() => import('./components/CustomizerModal').then((m) => ({ default: m.CustomizerModal })));
+const MissionsModal = lazy(() => import('./components/MissionsModal').then((m) => ({ default: m.MissionsModal })));
+const ParentalModal = lazy(() => import('./components/ParentalModal').then((m) => ({ default: m.ParentalModal })));
+const WalkthroughModal = lazy(() => import('./components/WalkthroughModal').then((m) => ({ default: m.WalkthroughModal })));
+const MapExplorerModal = lazy(() => import('./components/MapExplorerModal').then((m) => ({ default: m.MapExplorerModal })));
+const NPCDialogueModal = lazy(() => import('./components/NPCDialogueModal').then((m) => ({ default: m.NPCDialogueModal })));
 
 // Dev-only debug overlay (spec §33). The conditional dynamic import means neither this
 // module nor the engine.debug* methods it calls are emitted in a production build.
@@ -77,26 +77,37 @@ export default function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [audioStarted, setAudioStarted] = useState(false);
 
-  // Initialize Three.js Game Engine
+  // Game engine is a separate chunk (spec §25 / D2) so the first paint isn't 1 MB of Three.js.
   useEffect(() => {
     if (!containerRef.current || engineRef.current) return;
+    const el = containerRef.current;
+    const custom = customization;
+    const sets = settings;
+    const save = initialSave;
+    let cancelled = false;
+    let engine: GameEngine | null = null;
 
-    const engine = new GameEngine(containerRef.current, customization, settings, initialSave ?? undefined);
-    engine.onStateUpdate = (newState) => {
-      setGameState({ ...newState });
-    };
-    engine.onRequestSave = (data) => {
-      SaveManager.save(data);
-    };
-
-    engineRef.current = engine;
-    setGameState(engine.state);
-
-    // Music starts from the "tap to start" gate (handleStartAudio) so mobile WebViews
-    // unlock the AudioContext on a real gesture instead of swallowing the first sounds.
+    import('./game/gameEngine').then(({ GameEngine }) => {
+      if (cancelled || !el) return;
+      // Wait one frame so the canvas container has a non-zero layout size (WebGL shaders
+      // fail to compile on a 0×0 drawing buffer in some Chromium/swiftshader setups).
+      requestAnimationFrame(() => {
+        if (cancelled || !el) return;
+        engine = new GameEngine(el, custom, sets, save ?? undefined);
+        engine.onStateUpdate = (newState) => {
+          setGameState({ ...newState });
+        };
+        engine.onRequestSave = (data) => {
+          SaveManager.save(data);
+        };
+        engineRef.current = engine;
+        setGameState(engine.state);
+      });
+    });
 
     return () => {
-      engine.destroy();
+      cancelled = true;
+      engine?.destroy();
       engineRef.current = null;
     };
   }, []);
@@ -229,6 +240,7 @@ export default function App() {
         />
       )}
 
+      <Suspense fallback={null}>
       {/* Modal: Interactive NPC Dialogue */}
       {gameState && gameState.activeNPCDialogue && (
         <NPCDialogueModal
@@ -289,6 +301,7 @@ export default function App() {
           onClose={() => setShowParental(false)}
         />
       )}
+      </Suspense>
 
       {/* Parental Play Time Reminder Alert */}
       {showTimeReminder && (

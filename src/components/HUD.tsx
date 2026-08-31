@@ -29,17 +29,22 @@ import {
   X,
   CornerUpRight
 } from 'lucide-react';
-import { GameState } from '../game/gameEngine';
+import type { GameState } from '../game/gameEngine';
 import { soundEngine } from '../game/audio';
 import { CHAOS } from '../game/tunables';
 import { MiniMap } from './MiniMap';
-import * as THREE from 'three';
+
+interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
 
 interface HUDProps {
   state: GameState;
-  playerPos: THREE.Vector3;
+  playerPos: Vec3;
   playerRot: number;
-  bikePos: THREE.Vector3;
+  bikePos: Vec3;
   onOpenCustomizer: () => void;
   onOpenMissions: () => void;
   onOpenParental: () => void;
@@ -451,7 +456,7 @@ export const HUD: React.FC<HUDProps> = ({
         )}
 
         {/* Contextual Action Prompt for Mounting */}
-        {!state.isRiding && playerPos.distanceTo(bikePos) < 4.5 && state.nearInteraction !== 'refuel' && state.nearInteraction !== 'talk' && (
+        {!state.isRiding && Math.hypot(playerPos.x - bikePos.x, playerPos.y - bikePos.y, playerPos.z - bikePos.z) < 4.5 && state.nearInteraction !== 'refuel' && state.nearInteraction !== 'talk' && (
           <div className="pointer-events-auto">
             <button
               onClick={onInteract}
