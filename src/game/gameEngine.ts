@@ -190,6 +190,8 @@ export class GameEngine {
   public dronePitch = 0;
 
   // Orbit drag & view control (shared with CameraRig)
+  /** World-space camera heading — independent of player/bike facing so look-around can stick. */
+  public cameraYaw = 0;
   public orbitYawOffset = 0;
   public orbitPitchOffset = 0;
   public isPointerDragging = false;
@@ -372,6 +374,7 @@ export class GameEngine {
     if (savedGame) {
       this.saveController.apply(savedGame);
     }
+    this.cameraYaw = this.state.isRiding ? this.bikeRot : this.playerRot;
 
     this.startLoop();
 
@@ -549,7 +552,7 @@ export class GameEngine {
       this.scene.fog.density = q.fogDensity;
     }
 
-    // Trim autonomous agents (slice only spawns 4 of each — hide the surplus).
+    // Trim autonomous agents — the world spawns HIGH's pool; hide the surplus.
     this.world.trafficVehicles.forEach((v, i) => (v.obj.visible = i < q.trafficCount));
     let peds = 0;
     this.world.npcLocals.forEach((n) => {

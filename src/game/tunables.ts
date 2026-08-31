@@ -185,14 +185,18 @@ export const CHAOS = {
 
 /** Chase / action / FPV / tactical camera feel — see CameraRig. */
 export const CAMERA = {
-  dragYawSensitivity: 0.006,
-  dragPitchSensitivity: 0.005,
+  dragYawSensitivity: 0.008,
+  dragPitchSensitivity: 0.006,
   pitchOffsetMin: -0.4,
   pitchOffsetMax: 0.7,
-  recenterLerpPerSec: 2.5,
+  /** Only used while the followed subject is actually moving — never while standing still. */
+  recenterLerpPerSec: 2.2,
   recenterMinBikeSpeed: 4,
+  /** Stick / trigger must exceed this before look-around recenters. */
+  moveDeadzone: 0.28,
 
-  posLerpDefault: 9,
+  posLerpDefault: 11,
+  posLerpLook: 20,
   posLerpFPV: 22,
   fovLerpPerSec: 6,
 

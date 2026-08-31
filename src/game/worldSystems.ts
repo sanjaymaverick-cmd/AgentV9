@@ -31,9 +31,14 @@ export class WorldSystems {
 
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize();
-      // Rotate moveDir to camera orientation
-      const camAngle = Math.atan2(e.camera.position.x - e.playerPos.x, e.camera.position.z - e.playerPos.z);
-      moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), camAngle);
+      // Camera-relative walk using the intended look yaw — not the lerped camera
+      // position, which used to fight look-around and shake the walk cycle.
+      const yaw = e.cameraYaw;
+      const sin = Math.sin(yaw);
+      const cos = Math.cos(yaw);
+      const mx = moveDir.x * cos + moveDir.z * sin;
+      const mz = -moveDir.x * sin + moveDir.z * cos;
+      moveDir.set(mx, 0, mz);
 
       e.playerPos.x += moveDir.x * moveSpeed * dt;
       e.playerPos.z += moveDir.z * moveSpeed * dt;
@@ -118,16 +123,6 @@ export class WorldSystems {
     const agentR2 = (e.currentQuality.drawDistance * LOD.agentRange) ** 2;
 
     e.world.trafficVehicles.forEach((veh, i) => {
-      if (i >= e.currentQuality.trafficCount) {
-        veh.obj.visible = false;
-        return;
-      }
-      const d2 = (veh.obj.position.x - player.x) ** 2 + (veh.obj.position.z - player.z) ** 2;
-      if (d2 > agentR2) {
-        veh.obj.visible = false;
-        return;
-      }
-      veh.obj.visible = true;
       if (veh.route.length < 2) return;
 
       const p1 = veh.route[veh.routeIndex];
@@ -138,36 +133,38 @@ export class WorldSystems {
       const dz = p2[1] - p1[1];
       const segDist = Math.hypot(dx, dz) || 1;
 
-      // Advance along path
       veh.progress += (veh.speed * dt) / segDist;
       if (veh.progress >= 1.0) {
         veh.progress -= 1.0;
         veh.routeIndex = nextIdx;
       }
 
-      // Interpolate position
       const curX = THREE.MathUtils.lerp(p1[0], p2[0], veh.progress);
       const curZ = THREE.MathUtils.lerp(p1[1], p2[1], veh.progress);
       veh.obj.position.x = curX;
       veh.obj.position.z = curZ;
 
-      // Realistic Heading Direction
+      const overBudget = i >= e.currentQuality.trafficCount;
+      const d2 = (curX - player.x) ** 2 + (curZ - player.z) ** 2;
+      if (overBudget || d2 > agentR2) {
+        veh.obj.visible = false;
+        return;
+      }
+      veh.obj.visible = true;
+
       const targetAngle = Math.atan2(dx, dz) + Math.PI;
       let rotDiff = targetAngle - veh.obj.rotation.y;
       while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
       while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
       veh.obj.rotation.y += rotDiff * Math.min(1, dt * 6);
 
-      // Spin Wheels
       veh.wheels.forEach((w) => {
         w.rotation.x += veh.speed * dt * 2.4;
       });
 
-      // Player Collision / Proximity Check
       const activePlayerPos = e.state.isRiding ? e.bikePos : e.playerPos;
       const distToPlayer = veh.obj.position.distanceTo(activePlayerPos);
       if (distToPlayer < 3.2) {
-        // Subtle deflection feedback
         const pushDir = activePlayerPos.clone().sub(veh.obj.position).normalize();
         pushDir.y = 0;
         if (e.state.isRiding) {
@@ -252,18 +249,6 @@ export class WorldSystems {
 
         // Animate pedestrians walking along sidewalk routes
         if (npc.isPedestrian && npc.patrolRoute && npc.patrolRoute.length > 1) {
-          if (pedsShown >= e.currentQuality.pedestrianCount) {
-            npc.obj.visible = false;
-            return;
-          }
-          const agentR2 = (e.currentQuality.drawDistance * LOD.agentRange) ** 2;
-          const d2 = (npc.obj.position.x - playerTarget.x) ** 2 + (npc.obj.position.z - playerTarget.z) ** 2;
-          if (d2 > agentR2) {
-            npc.obj.visible = false;
-            return;
-          }
-          npc.obj.visible = true;
-          pedsShown++;
           const pRoute = npc.patrolRoute;
           const curIdx = npc.patrolIndex || 0;
           const nextIdx = (curIdx + 1) % pRoute.length;
@@ -278,13 +263,18 @@ export class WorldSystems {
             npc.obj.position.add(pDir.multiplyScalar(2.0 * dt));
             npc.obj.rotation.y = Math.atan2(pDir.x, pDir.z);
 
-            // Procedural walking limb animation
             const walkCycle = e.timer.getElapsed() * 7;
             npc.leftLeg.rotation.x = Math.sin(walkCycle) * 0.6;
             npc.rightLeg.rotation.x = -Math.sin(walkCycle) * 0.6;
             npc.leftArm.rotation.x = -Math.sin(walkCycle) * 0.4;
             npc.rightArm.rotation.x = Math.sin(walkCycle) * 0.4;
           }
+
+          const overBudget = pedsShown >= e.currentQuality.pedestrianCount;
+          pedsShown++;
+          const agentR2 = (e.currentQuality.drawDistance * LOD.agentRange) ** 2;
+          const d2 = (npc.obj.position.x - playerTarget.x) ** 2 + (npc.obj.position.z - playerTarget.z) ** 2;
+          npc.obj.visible = !overBudget && d2 <= agentR2;
         }
       });
     }

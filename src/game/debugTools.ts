@@ -43,6 +43,7 @@ interface Internals {
   isGrounded: boolean;
   orbitYawOffset: number;
   orbitPitchOffset: number;
+  cameraRig: GameEngine['cameraRig'];
   isEscortingOut: boolean;
   escortTimer: number;
   hasWarnedZeroFuel: boolean;
@@ -89,8 +90,7 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
       e.agentChar.group.position.copy(target);
     }
     e.dronePos.set(target.x, target.y + 3, target.z);
-    e.orbitYawOffset = 0;
-    e.orbitPitchOffset = 0;
+    e.cameraRig.resetLook();
     e.requestAutosave();
     e.notifyState();
   };

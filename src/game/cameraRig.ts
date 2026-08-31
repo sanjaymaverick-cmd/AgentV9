@@ -6,27 +6,33 @@ import { CAMERA } from './tunables';
 
 /**
  * Camera system (spec §8) — four modes (chase / action / FPV / tactical) with
- * speed-sensitive framing, plus the drag-to-orbit pointer handling.
+ * speed-sensitive framing, plus drag/swipe look.
  *
- * Moved verbatim from GameEngine; `this.` -> `this.e.`, feel scalars -> `CAMERA.*`.
- * The per-mode dist/height/lookHeight table is left inline as a single readable block.
+ * Camera heading (`cameraYaw`) is world-space and independent of the agent facing.
+ * Looking around while standing still does not snap back; recentering only happens
+ * when the followed subject is actually moving.
  */
 export class CameraRig {
   constructor(private e: GameEngine) {}
 
-  /** Drag anywhere on the canvas (not on UI) to look around. */
+  /** Drag / swipe on the canvas (not on UI) to look around. */
   attachPointerControls() {
     const e = this.e;
     const dom = e.container;
+    dom.style.touchAction = 'none';
 
     const onPointerDown = (ev: PointerEvent) => {
-      // Ignore if clicking on UI buttons
       if ((ev.target as HTMLElement)?.closest('button, input, select, a, .pointer-events-auto')) {
         return;
       }
       e.isPointerDragging = true;
       e.lastPointerX = ev.clientX;
       e.lastPointerY = ev.clientY;
+      try {
+        dom.setPointerCapture(ev.pointerId);
+      } catch {
+        /* capture not required */
+      }
     };
 
     const onPointerMove = (ev: PointerEvent) => {
@@ -36,7 +42,7 @@ export class CameraRig {
       e.lastPointerX = ev.clientX;
       e.lastPointerY = ev.clientY;
 
-      e.orbitYawOffset -= dx * CAMERA.dragYawSensitivity;
+      e.cameraYaw -= dx * CAMERA.dragYawSensitivity;
       e.orbitPitchOffset = THREE.MathUtils.clamp(
         e.orbitPitchOffset + dy * CAMERA.dragPitchSensitivity,
         CAMERA.pitchOffsetMin,
@@ -44,8 +50,13 @@ export class CameraRig {
       );
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (ev: PointerEvent) => {
       e.isPointerDragging = false;
+      try {
+        if (dom.hasPointerCapture(ev.pointerId)) dom.releasePointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
     };
 
     dom.addEventListener('pointerdown', onPointerDown);
@@ -54,11 +65,25 @@ export class CameraRig {
     window.addEventListener('pointercancel', onPointerUp);
   }
 
+  facingYaw(): number {
+    const e = this.e;
+    if (e.state.isMiniDroneActive) return e.droneRot;
+    if (e.state.isRiding) return e.bikeRot;
+    return e.playerRot;
+  }
+
+  /** Snap look back behind the subject (mode switch, reset, teleport). */
+  resetLook() {
+    const e = this.e;
+    e.cameraYaw = this.facingYaw();
+    e.orbitYawOffset = 0;
+    e.orbitPitchOffset = 0;
+  }
+
   setMode(mode: CameraMode) {
     const e = this.e;
     e.state.cameraMode = mode;
-    e.orbitYawOffset = 0;
-    e.orbitPitchOffset = 0;
+    this.resetLook();
     soundEngine.playCameraSwitch();
     const modeNames: Record<CameraMode, string> = {
       chase: 'Chase Cam (Dynamic 3rd Person)',
@@ -85,20 +110,18 @@ export class CameraRig {
       ? e.bikePos
       : e.playerPos;
 
-    const baseRot = e.state.isMiniDroneActive
-      ? e.droneRot
-      : e.state.isRiding
-      ? e.bikeRot
-      : e.playerRot;
+    const facing = this.facingYaw();
+    if (!Number.isFinite(e.cameraYaw)) e.cameraYaw = facing;
 
-    // Auto-recenter orbit view smoothly while actively moving
-    const isMoving = e.input.forward || e.input.backward || Math.abs(e.input.analogThrottle) > 0.2 || Math.abs(e.bikeSpeed) > CAMERA.recenterMinBikeSpeed;
-    if (isMoving && !e.isPointerDragging) {
-      e.orbitYawOffset = THREE.MathUtils.lerp(e.orbitYawOffset, 0, dt * CAMERA.recenterLerpPerSec);
+    // Recenter only while the *followed* subject is moving — leftover bikeSpeed
+    // after a dismount used to yank look-around back to the agent's face.
+    if (this.isSubjectMoving() && !e.isPointerDragging) {
+      e.cameraYaw = lerpAngle(e.cameraYaw, facing, Math.min(1, dt * CAMERA.recenterLerpPerSec));
       e.orbitPitchOffset = THREE.MathUtils.lerp(e.orbitPitchOffset, 0, dt * CAMERA.recenterLerpPerSec);
     }
+    e.orbitYawOffset = wrapAngle(e.cameraYaw - facing);
 
-    const effectiveRot = baseRot + e.orbitYawOffset;
+    const effectiveRot = e.cameraYaw;
     const mode = e.state.cameraMode;
 
     let dist = 7.5;
@@ -110,22 +133,18 @@ export class CameraRig {
       height = 1.8;
       lookHeight = 0.5;
     } else if (mode === 'action') {
-      // Low, cinematic action angle showing bike suspension and flames
       dist = 4.8;
       height = 1.6;
       lookHeight = 1.1;
     } else if (mode === 'fpv') {
-      // Cockpit / Handlebars First Person Perspective
       dist = -0.3;
       height = e.state.isRiding ? 1.38 : 1.7;
       lookHeight = 1.35;
     } else if (mode === 'tactical') {
-      // Overhead Bird's-Eye Tactical Map view
       dist = 28.0;
       height = 36.0;
       lookHeight = 0.0;
     } else {
-      // Default 'chase' view
       dist = e.state.isRiding ? 7.6 : 5.4;
       height = e.state.isRiding ? 3.0 : 2.4;
       lookHeight = 1.3;
@@ -136,7 +155,6 @@ export class CameraRig {
     const targetCamZ = target.z + Math.cos(effectiveRot) * dist;
     const targetCamY = Math.max(0.6, target.y + height + pitchBonus);
 
-    // Vibration at high speed for FPV mode
     let vibX = 0;
     let vibY = 0;
     if (mode === 'fpv' && Math.abs(e.bikeSpeed) > CAMERA.fpvVibMinSpeed) {
@@ -145,11 +163,14 @@ export class CameraRig {
     }
 
     const targetPos = new THREE.Vector3(targetCamX + vibX, targetCamY + vibY, targetCamZ);
-    const lerpSpeed = mode === 'fpv' ? CAMERA.posLerpFPV : CAMERA.posLerpDefault;
-    e.camera.position.lerp(targetPos, dt * lerpSpeed);
+    const lerpSpeed = e.isPointerDragging
+      ? CAMERA.posLerpLook
+      : mode === 'fpv'
+      ? CAMERA.posLerpFPV
+      : CAMERA.posLerpDefault;
+    e.camera.position.lerp(targetPos, Math.min(1, dt * lerpSpeed));
 
     if (mode === 'fpv') {
-      // Look straight ahead in direction of vehicle
       const lookTargetX = target.x - Math.sin(effectiveRot) * 20;
       const lookTargetZ = target.z - Math.cos(effectiveRot) * 20;
       e.camera.lookAt(lookTargetX, target.y + lookHeight, lookTargetZ);
@@ -157,11 +178,34 @@ export class CameraRig {
       e.camera.lookAt(target.x, target.y + lookHeight, target.z);
     }
 
-    // Dynamic FOV on boost / speed
     const baseFOV = mode === 'action' ? CAMERA.fovBaseAction : mode === 'fpv' ? CAMERA.fovBaseFPV : CAMERA.fovBaseChase;
     const boostFOVBonus = e.state.isBoosting ? CAMERA.fovBoostBonus : Math.min(CAMERA.fovSpeedBonusMax, Math.abs(e.bikeSpeed) / 4);
     const targetFOV = baseFOV + boostFOVBonus;
     e.camera.fov = THREE.MathUtils.lerp(e.camera.fov, targetFOV, dt * CAMERA.fovLerpPerSec);
     e.camera.updateProjectionMatrix();
   }
+
+  private isSubjectMoving(): boolean {
+    const e = this.e;
+    const stick =
+      Math.abs(e.input.analogThrottle) > CAMERA.moveDeadzone ||
+      Math.abs(e.input.analogSteer) > CAMERA.moveDeadzone;
+    const keys = e.input.forward || e.input.backward || e.input.left || e.input.right;
+    if (e.state.isMiniDroneActive) return keys || stick;
+    if (e.state.isRiding) {
+      return keys || stick || Math.abs(e.bikeSpeed) > CAMERA.recenterMinBikeSpeed;
+    }
+    return keys || stick;
+  }
+}
+
+export function wrapAngle(a: number): number {
+  let d = a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+export function lerpAngle(from: number, to: number, t: number): number {
+  return from + wrapAngle(to - from) * t;
 }

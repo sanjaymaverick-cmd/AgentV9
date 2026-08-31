@@ -46,8 +46,7 @@ export class PlayerActions {
       e.isGrounded = true;
       e.setNotification('Agent Position Stabilized!');
     }
-    e.orbitYawOffset = 0;
-    e.orbitPitchOffset = 0;
+    e.cameraRig.resetLook();
     e.notifyState();
   }
 
