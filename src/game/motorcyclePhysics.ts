@@ -183,27 +183,30 @@ export class MotorcyclePhysics {
   private spawnDriftParticle() {
     const e = this.e;
     if (e.driftParticles.length >= e.maxDriftParticles) return;
-    const geo = new THREE.SphereGeometry(0.12, 6, 6);
-    const mat = new THREE.MeshBasicMaterial({ color: Math.random() < 0.5 ? '#38bdf8' : '#00f2fe' });
-    const p = new THREE.Mesh(geo, mat);
-
-    // Spawn at rear wheel
-    const rearPos = e.bikePos.clone().add(new THREE.Vector3(Math.sin(e.bikeRot) * 1.2, 0.15, Math.cos(e.bikeRot) * 1.2));
-    p.position.copy(rearPos);
-    e.scene.add(p);
-
-    const vel = new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 2, (Math.random() - 0.5) * 3);
-    e.driftParticles.push({ mesh: p, vel, life: 0.4 });
+    const p = e.driftPool.acquire();
+    (p.material as THREE.MeshBasicMaterial).color.set(Math.random() < 0.5 ? '#38bdf8' : '#00f2fe');
+    p.position.set(
+      e.bikePos.x + Math.sin(e.bikeRot) * 1.2,
+      e.bikePos.y + 0.15,
+      e.bikePos.z + Math.cos(e.bikeRot) * 1.2
+    );
+    e.driftParticles.push({
+      mesh: p,
+      vel: new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 2, (Math.random() - 0.5) * 3),
+      life: 0.4,
+    });
   }
 
   private updateDriftParticles(dt: number) {
     const e = this.e;
     for (let i = e.driftParticles.length - 1; i >= 0; i--) {
       const part = e.driftParticles[i];
-      part.mesh.position.add(part.vel.clone().multiplyScalar(dt));
+      part.mesh.position.x += part.vel.x * dt;
+      part.mesh.position.y += part.vel.y * dt;
+      part.mesh.position.z += part.vel.z * dt;
       part.life -= dt;
       if (part.life <= 0) {
-        e.scene.remove(part.mesh);
+        e.driftPool.release(part.mesh);
         e.driftParticles.splice(i, 1);
       }
     }

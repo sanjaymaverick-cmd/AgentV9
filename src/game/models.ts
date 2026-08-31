@@ -1465,6 +1465,19 @@ export function createCyberFuelStation(id: string, name: string): {
 // URBAN ENVIRONMENT 3D BUILDERS
 // ----------------------------------------------------
 
+const STREET_POLE_MAT = new THREE.MeshStandardMaterial({ color: '#1e293b', metalness: 0.8, roughness: 0.3 });
+const STREET_HEAD_MAT = new THREE.MeshStandardMaterial({ color: '#0f172a', metalness: 0.9, roughness: 0.2 });
+const STREET_BULB_MAT = new THREE.MeshBasicMaterial({ color: '#38bdf8' });
+const STREET_BASE_GEO = new THREE.CylinderGeometry(0.35, 0.45, 0.6, 8);
+const STREET_POLE_GEO = new THREE.CylinderGeometry(0.12, 0.16, 6.5, 8);
+const STREET_ARM_GEO = new THREE.BoxGeometry(1.8, 0.12, 0.14);
+const STREET_HEAD_GEO = new THREE.BoxGeometry(0.65, 0.15, 0.3);
+const STREET_BULB_GEO = (() => {
+  const g = new THREE.PlaneGeometry(0.55, 0.22);
+  g.rotateX(Math.PI / 2);
+  return g;
+})();
+
 // 1. Cyber Street Lamp
 export function createStreetLight(color = '#38bdf8'): {
   group: THREE.Group;
@@ -1473,40 +1486,25 @@ export function createStreetLight(color = '#38bdf8'): {
   const group = new THREE.Group();
   group.name = 'StreetLight';
 
-  const poleMat = new THREE.MeshStandardMaterial({ color: '#1e293b', metalness: 0.8, roughness: 0.3 });
-  const headMat = new THREE.MeshStandardMaterial({ color: '#0f172a', metalness: 0.9, roughness: 0.2 });
-  const bulbMat = new THREE.MeshBasicMaterial({ color });
-
-  // Base
-  const baseGeo = new THREE.CylinderGeometry(0.35, 0.45, 0.6, 8);
-  const base = new THREE.Mesh(baseGeo, poleMat);
+  const base = new THREE.Mesh(STREET_BASE_GEO, STREET_POLE_MAT);
   base.position.y = 0.3;
   group.add(base);
 
-  // Vertical Pole
-  const poleGeo = new THREE.CylinderGeometry(0.12, 0.16, 6.5, 8);
-  const pole = new THREE.Mesh(poleGeo, poleMat);
+  const pole = new THREE.Mesh(STREET_POLE_GEO, STREET_POLE_MAT);
   pole.position.y = 3.6;
   pole.castShadow = true;
   group.add(pole);
 
-  // Curved Top Arm
-  const armGeo = new THREE.BoxGeometry(1.8, 0.12, 0.14);
-  const arm = new THREE.Mesh(armGeo, poleMat);
+  const arm = new THREE.Mesh(STREET_ARM_GEO, STREET_POLE_MAT);
   arm.position.set(0.7, 6.8, 0);
   arm.rotation.z = -0.15;
   group.add(arm);
 
-  // Lamp Head Fixture
-  const headGeo = new THREE.BoxGeometry(0.65, 0.15, 0.3);
-  const head = new THREE.Mesh(headGeo, headMat);
+  const head = new THREE.Mesh(STREET_HEAD_GEO, STREET_HEAD_MAT);
   head.position.set(1.4, 6.6, 0);
   group.add(head);
 
-  // Glowing Bulb Lens
-  const bulbGeo = new THREE.PlaneGeometry(0.55, 0.22);
-  bulbGeo.rotateX(Math.PI / 2);
-  const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+  const bulb = new THREE.Mesh(STREET_BULB_GEO, color === '#38bdf8' ? STREET_BULB_MAT : new THREE.MeshBasicMaterial({ color }));
   bulb.position.set(1.4, 6.51, 0);
   group.add(bulb);
 
@@ -1520,47 +1518,58 @@ export function createStreetLight(color = '#38bdf8'): {
   return { group, light };
 }
 
+const TREE_PLANTER_MAT = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.6, metalness: 0.5 });
+const TREE_TRUNK_MAT = new THREE.MeshStandardMaterial({ color: '#090a0f', roughness: 0.4, metalness: 0.8 });
+const TREE_NEON = new THREE.MeshBasicMaterial({ color: '#06b6d4' });
+const TREE_PLANTER_GEO = new THREE.CylinderGeometry(1.2, 0.9, 0.7, 8);
+const TREE_TRUNK_GEO = new THREE.CylinderGeometry(0.2, 0.28, 3.2, 8);
+const TREE_RING_GEO = (() => {
+  const g = new THREE.TorusGeometry(1.15, 0.03, 6, 16);
+  g.rotateX(Math.PI / 2);
+  return g;
+})();
+const TREE_CONE_GEOS = [
+  new THREE.ConeGeometry(1.6, 1.4, 6),
+  new THREE.ConeGeometry(1.2, 1.2, 6),
+  new THREE.ConeGeometry(0.8, 1.0, 6),
+];
+const TREE_LEAF_MATS = new Map<string, THREE.MeshStandardMaterial>();
+
+function treeLeafMat(color: string) {
+  let m = TREE_LEAF_MATS.get(color);
+  if (!m) {
+    m = new THREE.MeshStandardMaterial({ color, roughness: 0.2, metalness: 0.4, emissive: color, emissiveIntensity: 0.2 });
+    TREE_LEAF_MATS.set(color, m);
+  }
+  return m;
+}
+
 // 2. Cyber Tree / Urban Planter
 export function createCyberTree(foliageColor = '#10b981'): THREE.Group {
   const group = new THREE.Group();
   group.name = 'CyberTree';
+  const leafMat = treeLeafMat(foliageColor);
 
-  const planterMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.6, metalness: 0.5 });
-  const trunkMat = new THREE.MeshStandardMaterial({ color: '#090a0f', roughness: 0.4, metalness: 0.8 });
-  const leafMat = new THREE.MeshStandardMaterial({ color: foliageColor, roughness: 0.2, metalness: 0.4, emissive: foliageColor, emissiveIntensity: 0.2 });
-  const neonCyan = new THREE.MeshBasicMaterial({ color: '#06b6d4' });
-
-  // Planter Box
-  const planterGeo = new THREE.CylinderGeometry(1.2, 0.9, 0.7, 8);
-  const planter = new THREE.Mesh(planterGeo, planterMat);
+  const planter = new THREE.Mesh(TREE_PLANTER_GEO, TREE_PLANTER_MAT);
   planter.position.y = 0.35;
   planter.castShadow = true;
   group.add(planter);
 
-  // Planter neon accent ring
-  const ringGeo = new THREE.TorusGeometry(1.15, 0.03, 6, 16);
-  ringGeo.rotateX(Math.PI / 2);
-  const ring = new THREE.Mesh(ringGeo, neonCyan);
+  const ring = new THREE.Mesh(TREE_RING_GEO, TREE_NEON);
   ring.position.y = 0.55;
   group.add(ring);
 
-  // Trunk
-  const trunkGeo = new THREE.CylinderGeometry(0.2, 0.28, 3.2, 8);
-  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  const trunk = new THREE.Mesh(TREE_TRUNK_GEO, TREE_TRUNK_MAT);
   trunk.position.y = 2.1;
   trunk.castShadow = true;
   group.add(trunk);
 
-  // Tiered Geometric Holographic Canopy
-  [
-    { y: 3.5, rad: 1.6, h: 1.4 },
-    { y: 4.5, rad: 1.2, h: 1.2 },
-    { y: 5.3, rad: 0.8, h: 1.0 },
-  ].forEach((tier) => {
-    const coneGeo = new THREE.ConeGeometry(tier.rad, tier.h, 6);
-    const cone = new THREE.Mesh(coneGeo, leafMat);
-    cone.position.y = tier.y;
-    cone.castShadow = true;
+  const ys = [3.5, 4.5, 5.3];
+  TREE_CONE_GEOS.forEach((geo, i) => {
+    const cone = new THREE.Mesh(geo, leafMat);
+    cone.position.y = ys[i];
+    cone.castShadow = i === 0;
+    cone.name = i === 0 ? 'lod0' : 'lod1';
     group.add(cone);
   });
 
@@ -1610,6 +1619,11 @@ export function createBusStop(): THREE.Group {
   return group;
 }
 
+const RACE_TORUS_GEO = new THREE.TorusGeometry(3.1, 0.16, 8, 24);
+const RACE_PAD_GEO = new THREE.RingGeometry(1.6, 3.0, 24);
+const RACE_POST_GEO = new THREE.CylinderGeometry(0.08, 0.1, 2.0, 6);
+const RACE_POST_MAT = new THREE.MeshStandardMaterial({ color: '#0f172a', metalness: 0.7, roughness: 0.3 });
+
 /** Vertical drive-through hoop for the downtown sprint (spec §19). */
 export function createRaceCheckpoint(index: number): { group: THREE.Group; ring: THREE.Mesh } {
   const group = new THREE.Group();
@@ -1621,22 +1635,19 @@ export function createRaceCheckpoint(index: number): { group: THREE.Group; ring:
     opacity: 0.85,
     side: THREE.DoubleSide,
   });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.16, 8, 24), ringMat);
+  const ring = new THREE.Mesh(RACE_TORUS_GEO, ringMat);
   ring.position.y = 2.2;
   group.add(ring);
 
   const pad = new THREE.Mesh(
-    new THREE.RingGeometry(1.6, 3.0, 24),
+    RACE_PAD_GEO,
     new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.28, side: THREE.DoubleSide })
   );
   pad.rotation.x = -Math.PI / 2;
   pad.position.y = 0.08;
   group.add(pad);
 
-  const post = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.08, 0.1, 2.0, 6),
-    new THREE.MeshStandardMaterial({ color: '#0f172a', metalness: 0.7, roughness: 0.3 })
-  );
+  const post = new THREE.Mesh(RACE_POST_GEO, RACE_POST_MAT);
   post.position.set(3.2, 1.0, 0);
   group.add(post);
 

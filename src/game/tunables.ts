@@ -97,6 +97,18 @@ export const STEALTH = {
 } as const;
 
 /**
+ * Distance activation / LOD (spec §25). Fractions of the active quality drawDistance.
+ */
+export const LOD = {
+  /** Traffic + pedestrians skip simulation beyond this fraction of camera.far. */
+  agentRange: 0.36,
+  /** Street-light SpotLights disable beyond this. */
+  lightRange: 0.2,
+  /** Trees / benches hide beyond this; inner canopy LOD at 0.55 of it. */
+  propRange: 0.48,
+} as const;
+
+/**
  * City-wide CHAOS heat (spec §17). Owned by ChaosAlertManager — StealthAI no longer
  * writes chaosAlertLevel. Progress is 0–100 toward the next level, not a bot clone.
  */

@@ -48,6 +48,7 @@ import { ChaosAlertManager } from './chaosAlertManager';
 import { RaceManager, RacePhase } from './raceManager';
 import { ChaseController, ChasePhase } from './chaseController';
 import { QualityPreset, QUALITY_PRESETS } from './quality';
+import { MeshPool, PARTICLE_GEO } from './objectPool';
 
 export interface GameState {
   isRiding: boolean;
@@ -151,6 +152,8 @@ export class GameEngine {
   public waypointGroup!: THREE.Group;
   public driftParticles: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number }[] = [];
   public refuelParticles: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number }[] = [];
+  public driftPool!: MeshPool;
+  public refuelPool!: MeshPool;
   public gpsRibbonGroup!: THREE.Group;
   public lastLowFuelAlertTime = 0;
   public hasWarnedZeroFuel = false;
@@ -437,6 +440,14 @@ export class GameEngine {
     this.chaosAlertManager = new ChaosAlertManager(this);
     this.raceManager = new RaceManager(this);
     this.chaseController = new ChaseController(this);
+    this.driftPool = new MeshPool(this.scene, () => new THREE.Mesh(
+      PARTICLE_GEO,
+      new THREE.MeshBasicMaterial({ color: '#38bdf8' })
+    ));
+    this.refuelPool = new MeshPool(this.scene, () => new THREE.Mesh(
+      PARTICLE_GEO,
+      new THREE.MeshBasicMaterial({ color: '#10b981', transparent: true, opacity: 0.9 })
+    ));
   }
 
   private initWaypointBeacon() {
@@ -638,6 +649,7 @@ export class GameEngine {
     this.missionRunner.update(dt);
 
     // 9. Update Autonomous City Traffic Vehicles
+    this.worldSystems.updateLod();
     this.worldSystems.updateTrafficVehicles(dt);
 
     // 9. Update Sounds

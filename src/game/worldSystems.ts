@@ -4,6 +4,7 @@ import type { GameEngine } from './gameEngine';
 import { gatherInteriorBoxes, type WorldObjects } from './world';
 import { resolveCircleAabbs } from './collision';
 import { soundEngine } from './audio';
+import { LOD } from './tunables';
 
 /**
  * The per-frame "everything else in the world" bundle:
@@ -113,7 +114,20 @@ export class WorldSystems {
     const e = this.e;
     if (!e.world || !e.world.trafficVehicles) return;
 
-    e.world.trafficVehicles.forEach((veh) => {
+    const player = e.state.isRiding ? e.bikePos : e.playerPos;
+    const agentR2 = (e.currentQuality.drawDistance * LOD.agentRange) ** 2;
+
+    e.world.trafficVehicles.forEach((veh, i) => {
+      if (i >= e.currentQuality.trafficCount) {
+        veh.obj.visible = false;
+        return;
+      }
+      const d2 = (veh.obj.position.x - player.x) ** 2 + (veh.obj.position.z - player.z) ** 2;
+      if (d2 > agentR2) {
+        veh.obj.visible = false;
+        return;
+      }
+      veh.obj.visible = true;
       if (veh.route.length < 2) return;
 
       const p1 = veh.route[veh.routeIndex];
@@ -217,6 +231,7 @@ export class WorldSystems {
     let minNPCDist = 4.2;
 
     if (e.world.npcLocals) {
+      let pedsShown = 0;
       e.world.npcLocals.forEach((npc) => {
         const dist = playerTarget.distanceTo(npc.obj.position);
 
@@ -234,6 +249,18 @@ export class WorldSystems {
 
         // Animate pedestrians walking along sidewalk routes
         if (npc.isPedestrian && npc.patrolRoute && npc.patrolRoute.length > 1) {
+          if (pedsShown >= e.currentQuality.pedestrianCount) {
+            npc.obj.visible = false;
+            return;
+          }
+          const agentR2 = (e.currentQuality.drawDistance * LOD.agentRange) ** 2;
+          const d2 = (npc.obj.position.x - playerTarget.x) ** 2 + (npc.obj.position.z - playerTarget.z) ** 2;
+          if (d2 > agentR2) {
+            npc.obj.visible = false;
+            return;
+          }
+          npc.obj.visible = true;
+          pedsShown++;
           const pRoute = npc.patrolRoute;
           const curIdx = npc.patrolIndex || 0;
           const nextIdx = (curIdx + 1) % pRoute.length;
@@ -381,23 +408,16 @@ export class WorldSystems {
   spawnRefuelParticle(fromPos: [number, number, number], toPos: THREE.Vector3) {
     const e = this.e;
     if (e.refuelParticles.length >= e.maxRefuelParticles) return;
-    const geo = new THREE.SphereGeometry(0.14, 6, 6);
-    const mat = new THREE.MeshBasicMaterial({
-      color: Math.random() < 0.6 ? '#10b981' : '#00f2fe',
-      transparent: true,
-      opacity: 0.9,
-    });
-    const p = new THREE.Mesh(geo, mat);
-
-    // Start from station dispenser / pump
-    const pumpSource = new THREE.Vector3(fromPos[0], fromPos[1] + 2.2, fromPos[2] - 1.4);
-    p.position.copy(pumpSource);
-
-    // Direct velocity towards motorcycle fuel port
-    const target = toPos.clone().add(new THREE.Vector3(0, 0.75, 0));
-    const vel = target.sub(pumpSource).multiplyScalar(3.5);
-
-    e.scene.add(p);
+    const p = e.refuelPool.acquire();
+    const mat = p.material as THREE.MeshBasicMaterial;
+    mat.color.set(Math.random() < 0.6 ? '#10b981' : '#00f2fe');
+    mat.opacity = 0.9;
+    p.position.set(fromPos[0], fromPos[1] + 2.2, fromPos[2] - 1.4);
+    const vel = new THREE.Vector3(
+      (toPos.x - p.position.x) * 3.5,
+      (toPos.y + 0.75 - p.position.y) * 3.5,
+      (toPos.z - p.position.z) * 3.5
+    );
     e.refuelParticles.push({ mesh: p, vel, life: 0.35 });
   }
 
@@ -405,13 +425,45 @@ export class WorldSystems {
     const e = this.e;
     for (let i = e.refuelParticles.length - 1; i >= 0; i--) {
       const p = e.refuelParticles[i];
-      p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
+      p.mesh.position.x += p.vel.x * dt;
+      p.mesh.position.y += p.vel.y * dt;
+      p.mesh.position.z += p.vel.z * dt;
       p.life -= dt;
       (p.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, p.life / 0.35);
 
       if (p.life <= 0) {
-        e.scene.remove(p.mesh);
+        e.refuelPool.release(p.mesh);
         e.refuelParticles.splice(i, 1);
+      }
+    }
+  }
+
+  /** Distance activation + tree LOD (spec §25). */
+  updateLod() {
+    const e = this.e;
+    const p = e.state.isRiding ? e.bikePos : e.playerPos;
+    const far = e.currentQuality.drawDistance;
+    const lightR2 = (far * LOD.lightRange) ** 2;
+    const propR2 = (far * LOD.propRange) ** 2;
+    const lod1R2 = propR2 * 0.4;
+
+    if (e.world.streetLights) {
+      for (const sl of e.world.streetLights) {
+        const d2 = (sl.group.position.x - p.x) ** 2 + (sl.group.position.z - p.z) ** 2;
+        const on = d2 <= lightR2;
+        sl.light.visible = on;
+        sl.light.intensity = on ? 2.4 : 0;
+      }
+    }
+    if (e.world.trees) {
+      for (const t of e.world.trees) {
+        const d2 = (t.position.x - p.x) ** 2 + (t.position.z - p.z) ** 2;
+        t.visible = d2 <= propR2;
+        if (!t.visible) continue;
+        const near = d2 <= lod1R2;
+        t.traverse((c) => {
+          if (c.name === 'lod1') c.visible = near;
+        });
       }
     }
   }

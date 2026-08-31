@@ -103,6 +103,8 @@ export interface WorldObjects {
     pulseRing: THREE.Mesh;
   }[];
   trafficVehicles: TrafficVehicle[];
+  streetLights: { group: THREE.Group; light: THREE.SpotLight }[];
+  trees: THREE.Group[];
   npcLocals: NPCObject[];
   cityPOIs: CityPOI[];
   museumLaserGate: THREE.Mesh;
@@ -126,6 +128,8 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
   const raceCheckpoints: WorldObjects['raceCheckpoints'] = [];
   const fuelStations: WorldObjects['fuelStations'] = [];
   const trafficVehicles: TrafficVehicle[] = [];
+  const streetLights: WorldObjects['streetLights'] = [];
+  const trees: THREE.Group[] = [];
   const npcLocals: NPCObject[] = [];
 
   // ---------------------------------------------------
@@ -389,6 +393,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     sl.group.position.set(lx, ly, lz);
     sl.group.rotation.y = lx < 0 ? Math.PI / 2 : -Math.PI / 2;
     scene.add(sl.group);
+    streetLights.push(sl);
   });
 
   // Cyber Trees in Plazas and sidewalk corridors
@@ -408,6 +413,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     const tree = createCyberTree(col);
     tree.position.set(tx, 0.22, tz);
     scene.add(tree);
+    trees.push(tree);
   });
 
   // Benches and Bus Stops
@@ -1185,6 +1191,8 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     raceCheckpoints,
     fuelStations,
     trafficVehicles,
+    streetLights,
+    trees,
     npcLocals,
     cityPOIs,
     museumLaserGate: laserGate,
