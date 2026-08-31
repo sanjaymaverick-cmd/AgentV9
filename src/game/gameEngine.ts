@@ -30,6 +30,7 @@ import {
   AUTOSAVE_DEBOUNCE_MS,
   PERIODIC_AUTOSAVE_SEC,
 } from './saveManager';
+import type { DebugTools } from './debugTools';
 
 export interface GameState {
   isRiding: boolean;
@@ -191,6 +192,13 @@ export class GameEngine {
   private lastSaveAtMs = 0;
   private periodicSaveTimer = 0;
 
+  /**
+   * Dev-only debug controls (spec §33). Assigned asynchronously from `./debugTools`
+   * when `import.meta.env.DEV`; the whole branch is dead-code-eliminated in production,
+   * so the module and its chunk never ship. Stays null in prod.
+   */
+  public debug: DebugTools | null = null;
+
   constructor(
     container: HTMLElement,
     customization: VehicleCustomization,
@@ -271,6 +279,16 @@ export class GameEngine {
     }
 
     this.startLoop();
+
+    if (import.meta.env.DEV) {
+      import('./debugTools')
+        .then((m) => {
+          this.debug = m.attachDebugTools(this);
+        })
+        .catch(() => {
+          /* dev-only; ignore */
+        });
+    }
 
     // Kira voice intro — skipped on a resumed game so we don't replay the opening brief.
     if (!savedGame) {

@@ -13,6 +13,12 @@ import { NPCDialogueModal } from './components/NPCDialogueModal';
 import { TouchControls } from './components/TouchControls';
 import { soundEngine } from './game/audio';
 
+// Dev-only debug overlay (spec §33). The conditional dynamic import means neither this
+// module nor the engine.debug* methods it calls are emitted in a production build.
+const DebugMenu = import.meta.env.DEV
+  ? React.lazy(() => import('./components/DebugMenu'))
+  : null;
+
 // Trivial device-local settings live outside the versioned save (see saveManager.ts).
 const STORAGE_KEY_SETTINGS = 'agent_v9_settings_v1';
 
@@ -57,6 +63,7 @@ export default function App() {
   const [showMap, setShowMap] = useState(false);
   const [sessionMinutes, setSessionMinutes] = useState(0);
   const [showTimeReminder, setShowTimeReminder] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Initialize Three.js Game Engine
   useEffect(() => {
@@ -115,6 +122,19 @@ export default function App() {
       engineRef.current.settings = newSettings;
     }
   };
+
+  // Dev-only: toggle the debug overlay with the backtick key.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Backquote') {
+        e.preventDefault();
+        setShowDebug((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Handle GPS route set from Map Explorer or Walkthrough
   const handleSetGPS = (target: CityPOI | [number, number, number], customName?: string) => {
@@ -245,6 +265,17 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Dev-only debug overlay — absent from production builds */}
+      {DebugMenu && showDebug && gameState && engineRef.current && (
+        <React.Suspense fallback={null}>
+          <DebugMenu
+            engine={engineRef.current}
+            state={gameState}
+            onClose={() => setShowDebug(false)}
+          />
+        </React.Suspense>
       )}
 
     </main>
