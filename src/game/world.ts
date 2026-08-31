@@ -63,6 +63,10 @@ export interface SecurityCameraObject {
   disabledUntil: number;
   viewDistance: number;
   viewAngle: number;
+  /** Restricted zone this camera watches; disguise check is data-driven. */
+  zoneId?: string;
+  /** 0–1 awareness, painted by GuardAI. */
+  alertLevel: number;
 }
 
 export interface RaceCheckpointObject {
@@ -740,13 +744,13 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     [10, 0, -94],
   ];
 
-  // Sweeping security cameras (spec §12). L2 CHAOS enhances range/sweep — see ChaosAlertManager.
-  // TODO: fold camera perception into GuardAI with the named awareness states.
-  const cameraDefs: { id: string; pos: [number, number, number]; yaw: number; sweep: number }[] = [
-    { id: 'cam_museum_front', pos: [8, 4.6, -68], yaw: Math.PI, sweep: 0.85 },
-    { id: 'cam_museum_dock', pos: [7, 4.2, -99], yaw: 0, sweep: 0.7 },
-    { id: 'cam_museum_hall', pos: [0, 4.8, -80], yaw: 0, sweep: 0.9 },
-    { id: 'cam_station', pos: [78, 5.2, 12], yaw: Math.PI / 2, sweep: 0.75 },
+  // Sweeping security cameras (spec §12). Awareness lives in GuardAI; L2 CHAOS
+  // still lengthens range and speeds the unaware sweep.
+  const cameraDefs: { id: string; pos: [number, number, number]; yaw: number; sweep: number; zoneId?: string }[] = [
+    { id: 'cam_museum_front', pos: [8, 4.6, -68], yaw: Math.PI, sweep: 0.85, zoneId: 'museum_dock' },
+    { id: 'cam_museum_dock', pos: [7, 4.2, -99], yaw: 0, sweep: 0.7, zoneId: 'museum_dock' },
+    { id: 'cam_museum_hall', pos: [0, 4.8, -80], yaw: 0, sweep: 0.9, zoneId: 'museum_dock' },
+    { id: 'cam_station', pos: [78, 5.2, 12], yaw: Math.PI / 2, sweep: 0.75, zoneId: 'station_cargo' },
     { id: 'cam_plaza', pos: [14, 5.0, 10], yaw: -2.3, sweep: 0.9 },
   ];
   cameraDefs.forEach((def) => {
@@ -765,6 +769,8 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
       disabledUntil: 0,
       viewDistance: 14,
       viewAngle: 50,
+      zoneId: def.zoneId,
+      alertLevel: 0,
     });
   });
 

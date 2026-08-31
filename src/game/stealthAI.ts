@@ -23,6 +23,17 @@ export class StealthAI {
     this.guards.resetAll();
   }
 
+  disableCamerasInZone(zoneId: string, ms = STEALTH.empDisableMs) {
+    const until = Date.now() + ms;
+    for (const cam of this.e.world.cameras) {
+      if (cam.zoneId !== zoneId) continue;
+      cam.disabledUntil = until;
+      cam.disabled = true;
+      cam.cone.visible = false;
+      cam.alertLevel = 0;
+    }
+  }
+
   update(dt: number) {
     this.emitAmbientNoise();
     this.guards.tick(dt, this.sounds.drain());

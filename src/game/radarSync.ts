@@ -72,6 +72,7 @@ export class RadarSync {
             z: cam.position[2],
             rot: cam.obj.rotation.y,
             label: 'Surveillance Cam',
+            alert: cam.alertLevel,
           });
         }
       });

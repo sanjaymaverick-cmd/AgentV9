@@ -134,6 +134,7 @@ export class SaveController {
           e.world.museumLaserGate.visible = false;
           e.world.museumStaffDoor.open = true;
           e.world.museumStaffDoor.mesh.visible = false;
+          e.stealthAI.disableCamerasInZone('museum_dock');
         }
         if (t.id === 'term_station_crane') e.world.stationCraneGate.position.y += 6;
       }

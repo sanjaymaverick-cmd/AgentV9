@@ -17,8 +17,8 @@ import {
  * decay route (hide, escape radius, disguise change, Academy safe zone, tracker EMP,
  * underground underpass). StealthAI reports sightings; it no longer writes the meter.
  *
- * TODO(C4): camera perception here is a stop-gap — move it into StealthAI with the
- * named Unaware/Curious/Investigating/Alert/Searching states.
+ * Camera awareness (sweep, timer, alarm) lives in GuardAI. This class still EMP-
+ * disables cameras and L2 still lengthens their range via chaosAlertLevel.
  */
 type PursuitKind = 'search' | 'interceptor';
 
@@ -187,7 +187,6 @@ export class ChaosAlertManager {
     const player = e.state.isRiding ? e.bikePos : e.playerPos;
     this.disguiseCooldown = Math.max(0, this.disguiseCooldown - dt);
 
-    this.updateCameras(dt, player);
     this.updateUnits(dt, player);
     this.updateRoadblockBump();
 
@@ -325,46 +324,6 @@ export class ChaosAlertManager {
     soundEngine.speak(line, 'kira');
     if (level === 0) this.e.setNotification('CHAOS alert cleared.');
     else this.e.setNotification(`CHAOS ALERT ${level}: ${name}`);
-  }
-
-  // ----- cameras (perception stop-gap until C4) --------------------------------
-
-  private updateCameras(_dt: number, player: THREE.Vector3) {
-    const e = this.e;
-    const enhanced = e.state.chaosAlertLevel >= 2;
-    const rangeMult = enhanced ? CHAOS.cameraEnhanceRangeMult : 1;
-    const sweepMult = enhanced ? CHAOS.cameraEnhanceSweepMult : 1;
-    const now = Date.now();
-    const t = e.timer.getElapsed();
-
-    for (const cam of e.world.cameras) {
-      if (now < cam.disabledUntil) {
-        cam.disabled = true;
-        cam.cone.visible = false;
-        continue;
-      }
-      cam.disabled = false;
-      cam.cone.visible = true;
-      const mat = cam.cone.material as THREE.MeshBasicMaterial;
-      mat.opacity = enhanced ? CHAOS.cameraEnhanceConeOpacity : 0.14;
-      mat.color.set(enhanced ? '#ef4444' : '#f59e0b');
-
-      const sweep = Math.sin(t * CHAOS.cameraSweepSpeed * sweepMult) * cam.sweepAngle;
-      cam.obj.rotation.y = cam.sweepCenter + sweep;
-
-      const range = CHAOS.cameraViewDistance * rangeMult;
-      const dist = player.distanceTo(this.tmp.set(cam.position[0], player.y, cam.position[2]));
-      if (dist >= range) continue;
-
-      this.fwd.set(0, 0, 1).applyAxisAngle(this.up, cam.obj.rotation.y);
-      this.tmp.copy(player).sub(cam.obj.position).setY(0).normalize();
-      const angle = this.fwd.angleTo(this.tmp);
-      if (angle < THREE.MathUtils.degToRad(cam.viewAngle / 2)) {
-        this.reportSighting(enhanced ? 1.1 : 0.75);
-        mat.opacity = 0.45;
-        mat.color.set('#ef4444');
-      }
-    }
   }
 
   // ----- pursuit units ---------------------------------------------------------

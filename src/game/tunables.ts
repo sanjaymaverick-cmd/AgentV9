@@ -94,6 +94,8 @@ export const STEALTH = {
   escortLerpPerSec: 3,
 
   navLinkDist: 28,
+  /** Guards this close to an alarming camera start investigating. */
+  cameraAlarmRadius: 22,
 } as const;
 
 /**

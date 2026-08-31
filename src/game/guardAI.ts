@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { DisguiseType, GuardState, RestrictedZone } from '../types/game';
 import type { GameEngine } from './gameEngine';
-import { STEALTH } from './tunables';
+import { CHAOS, STEALTH } from './tunables';
 
 export type SoundKind = 'footstep' | 'horn' | 'gadget' | 'decoy' | 'engine';
 
@@ -32,6 +32,28 @@ interface Brain {
   holdInCone: number;
 }
 
+/** XZ vision test shared by bots and cameras. Yaw 0 looks down +Z (Three default). */
+export function pointInViewCone(
+  ox: number,
+  oz: number,
+  yaw: number,
+  px: number,
+  pz: number,
+  range: number,
+  viewAngleDeg: number,
+): boolean {
+  const dx = px - ox;
+  const dz = pz - oz;
+  const dist = Math.hypot(dx, dz);
+  if (dist >= range) return false;
+  if (dist < 1e-6) return true;
+  const fwdX = Math.sin(yaw);
+  const fwdZ = Math.cos(yaw);
+  const dot = (fwdX * dx + fwdZ * dz) / dist;
+  const angle = Math.acos(Math.min(1, Math.max(-1, dot)));
+  return angle < THREE.MathUtils.degToRad(viewAngleDeg / 2);
+}
+
 const CONE: Record<GuardState, { color: string; opacity: number; alert: number }> = {
   unaware: { color: '#38bdf8', opacity: 0.15, alert: 0 },
   curious: { color: '#facc15', opacity: 0.28, alert: 0.22 },
@@ -58,6 +80,9 @@ export class GuardAI {
     this.brains.clear();
     this.e.world.bots.forEach((b) => {
       b.data.alertLevel = 0;
+    });
+    this.e.world.cameras.forEach((c) => {
+      c.alertLevel = 0;
     });
   }
 
@@ -115,9 +140,12 @@ export class GuardAI {
       }
     }
 
-    e.state.stealthVisibility = Math.round(
-      Math.max(0, ...e.world.bots.map((b) => b.data.alertLevel)) * 100
-    );
+    this.tickCameras(dt, player, silent, disguise);
+
+    let vis = 0;
+    for (const b of e.world.bots) vis = Math.max(vis, b.data.alertLevel);
+    for (const c of e.world.cameras) vis = Math.max(vis, c.alertLevel);
+    e.state.stealthVisibility = Math.round(vis * 100);
   }
 
   // ---------------------------------------------------------------------------
@@ -261,6 +289,113 @@ export class GuardAI {
     mat.color.set(look.color);
     mat.opacity = look.opacity;
     if (brain.state !== 'alert') bot.data.alertLevel = look.alert;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cameras (spec §12) — same awareness states, no locomotion, no escort-out.
+  // ---------------------------------------------------------------------------
+
+  private tickCameras(dt: number, player: THREE.Vector3, silent: boolean, disguise: DisguiseType) {
+    const e = this.e;
+    const enhanced = e.state.chaosAlertLevel >= 2;
+    const rangeMult = enhanced ? CHAOS.cameraEnhanceRangeMult : 1;
+    const sweepMult = enhanced ? CHAOS.cameraEnhanceSweepMult : 1;
+    const t = e.timer.getElapsed();
+    const now = Date.now();
+
+    for (const cam of e.world.cameras) {
+      if (now < cam.disabledUntil) {
+        cam.disabled = true;
+        cam.cone.visible = false;
+        cam.alertLevel = 0;
+        continue;
+      }
+      cam.disabled = false;
+      cam.cone.visible = true;
+      const brain = this.brain(`cam:${cam.id}`);
+      const range = cam.viewDistance * rangeMult * (silent ? STEALTH.silentDetectMult : 1);
+      const seen = this.camCanSee(cam, player, disguise, range);
+
+      if (seen) {
+        brain.lastKnown.set(player.x, 0, player.z);
+        brain.holdInCone += dt;
+        if (brain.state === 'unaware') this.setState(brain, 'curious');
+        else if (brain.state === 'curious' && brain.holdInCone >= STEALTH.curiousToInvestigateSec) {
+          this.setState(brain, 'investigating');
+        } else if (brain.state === 'investigating' && brain.holdInCone >= STEALTH.investigateToAlertSec) {
+          this.setState(brain, 'alert');
+          this.alarmNearbyGuards(brain.lastKnown);
+        } else if (brain.state === 'searching') this.setState(brain, 'alert');
+      } else {
+        brain.holdInCone = 0;
+      }
+
+      brain.timer += dt;
+      if (brain.state === 'curious' && brain.timer >= STEALTH.curiousDurationSec && !seen) {
+        this.setState(brain, 'unaware');
+      } else if (brain.state === 'investigating' && brain.timer > 8 && !seen) {
+        this.setState(brain, 'searching');
+      } else if (brain.state === 'alert' && !seen && brain.timer > 1.2) {
+        this.setState(brain, 'searching');
+      } else if (brain.state === 'searching' && brain.timer >= STEALTH.searchDurationSec) {
+        this.setState(brain, 'unaware');
+      }
+
+      if (brain.state === 'unaware') {
+        cam.obj.rotation.y = cam.sweepCenter + Math.sin(t * CHAOS.cameraSweepSpeed * sweepMult) * cam.sweepAngle;
+      } else if (brain.state === 'searching') {
+        brain.searchYaw += dt * 1.2;
+        cam.obj.rotation.y = cam.sweepCenter + Math.sin(brain.searchYaw) * (cam.sweepAngle + 0.35);
+      } else {
+        cam.obj.rotation.y = Math.atan2(
+          brain.lastKnown.x - cam.obj.position.x,
+          brain.lastKnown.z - cam.obj.position.z,
+        );
+      }
+
+      const look = CONE[brain.state];
+      const mat = cam.cone.material as THREE.MeshBasicMaterial;
+      mat.color.set(look.color);
+      mat.opacity = brain.state === 'unaware' && enhanced ? CHAOS.cameraEnhanceConeOpacity : look.opacity;
+      cam.alertLevel = look.alert;
+
+      if (brain.state === 'alert' || brain.state === 'investigating') {
+        e.chaosAlertManager.reportSighting(
+          brain.state === 'alert' ? (enhanced ? 1.1 : 0.75) : 0.4,
+        );
+      }
+    }
+  }
+
+  private camCanSee(
+    cam: GameEngine['world']['cameras'][0],
+    player: THREE.Vector3,
+    disguise: DisguiseType,
+    range: number,
+  ): boolean {
+    if (this.isExempt(cam.zoneId, disguise)) return false;
+    return pointInViewCone(
+      cam.obj.position.x,
+      cam.obj.position.z,
+      cam.obj.rotation.y,
+      player.x,
+      player.z,
+      range,
+      cam.viewAngle,
+    );
+  }
+
+  private alarmNearbyGuards(at: THREE.Vector3) {
+    for (const bot of this.e.world.bots) {
+      if (Date.now() < bot.data.disabledUntil) continue;
+      const d = Math.hypot(bot.obj.position.x - at.x, bot.obj.position.z - at.z);
+      if (d > STEALTH.cameraAlarmRadius) continue;
+      const brain = this.brain(bot.data.id);
+      brain.lastKnown.copy(at);
+      if (brain.state === 'unaware' || brain.state === 'curious') {
+        this.setState(brain, 'investigating');
+      }
+    }
   }
 
   private brain(id: string): Brain {
