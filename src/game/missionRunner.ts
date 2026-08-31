@@ -12,7 +12,7 @@ import { STORY_MISSION_MIDNIGHT_PROTOTYPE } from './missionEngine';
  * objective compass, and owns step-completion + the finale.
  *
  * Moved verbatim from GameEngine; `this.` -> `this.e.`, step radii -> `MISSION.*`.
- * TODO(spec §18): step 3 is still a bare proximity check, not a real chase controller.
+ * Step 3 (transport chase) is owned by ChaseController.
  */
 export class MissionRunner {
   constructor(private e: GameEngine) {}
@@ -93,16 +93,7 @@ export class MissionRunner {
       soundEngine.speak('Signal locked! CHAOS transport drone escaping towards the monorail station.', 'kira');
     }
 
-    // Step 3: Follow Drone to Station
-    if (mission.currentStepIndex === 2 && distToObjective < MISSION.step3FollowDist) {
-      this.checkStep('step_3_chase_drone', 'speed');
-      e.state.radioMessage = {
-        sender: 'Agent Kira (HQ)',
-        text: 'You reached the Cargo Station! Choose your infiltration path: SPEED (ramp jump), STEALTH (disguise/vent), or SMARTS (hack crane)!',
-        time: Date.now(),
-      };
-      soundEngine.speak('Cargo station ahead. Infiltrate using speed, stealth, or smarts.', 'kira');
-    }
+    // Step 3 (chase) is owned by ChaseController — no proximity auto-complete.
 
     // Step 4: Infiltrate Station
     if (mission.currentStepIndex === 3) {

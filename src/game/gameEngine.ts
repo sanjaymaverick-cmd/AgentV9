@@ -46,6 +46,7 @@ import { GamepadInput } from './gamepadInput';
 import { SaveController } from './saveController';
 import { ChaosAlertManager } from './chaosAlertManager';
 import { RaceManager, RacePhase } from './raceManager';
+import { ChaseController, ChasePhase } from './chaseController';
 import { QualityPreset, QUALITY_PRESETS } from './quality';
 
 export interface GameState {
@@ -82,6 +83,12 @@ export interface GameState {
   raceCountdownSec: number;
   raceBestTimeSec: number | null;
   raceWrongGate: boolean;
+  chaseActive: boolean;
+  chasePhase: ChasePhase;
+  chaseDistance: number;
+  chaseFailMeter: number;
+  chaseCheckpoint: number;
+  chaseCheckpointTotal: number;
   nearInteraction: string | null;
   activeMission: Mission;
   stats: PlayerStats;
@@ -250,6 +257,7 @@ export class GameEngine {
   public gamepadInput!: GamepadInput;
   public chaosAlertManager!: ChaosAlertManager;
   public raceManager!: RaceManager;
+  public chaseController!: ChaseController;
   /** Story mission parked while a side sprint runs, so accepting Maya doesn't wipe progress. */
   public stashedStoryMission: Mission | null = null;
 
@@ -302,6 +310,12 @@ export class GameEngine {
       raceCountdownSec: 0,
       raceBestTimeSec: null,
       raceWrongGate: false,
+      chaseActive: false,
+      chasePhase: 'idle',
+      chaseDistance: 0,
+      chaseFailMeter: 0,
+      chaseCheckpoint: 0,
+      chaseCheckpointTotal: 8,
       nearInteraction: null,
       activeMission: JSON.parse(JSON.stringify(STORY_MISSION_MIDNIGHT_PROTOTYPE)),
       stats: initialStats,
@@ -422,6 +436,7 @@ export class GameEngine {
     this.gamepadInput = new GamepadInput(this);
     this.chaosAlertManager = new ChaosAlertManager(this);
     this.raceManager = new RaceManager(this);
+    this.chaseController = new ChaseController(this);
   }
 
   private initWaypointBeacon() {
@@ -613,6 +628,9 @@ export class GameEngine {
 
     // 7. Downtown race (updates the current objective gate before the mission compass)
     this.raceManager.update(dt);
+
+    // 7b. Story chase (transport drone path) — also writes the live objective
+    this.chaseController.update(dt);
 
     // 8. Mission Check & Boss Drone Update
     this.missionRunner.update(dt);

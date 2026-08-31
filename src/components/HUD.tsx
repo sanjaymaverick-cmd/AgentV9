@@ -285,6 +285,36 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ---------------- MIDDLE SECTION: ALERT & PROMPTS ---------------- */}
       <div className="flex flex-col items-center justify-center gap-3">
         {/* Downtown checkpoint sprint */}
+        {(state.chasePhase === 'running' || state.chasePhase === 'recovering') && (
+          <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
+            state.chaseFailMeter > 70
+              ? 'border-red-500/70 shadow-red-950/50'
+              : 'border-fuchsia-400/70 shadow-fuchsia-950/40'
+          }`}>
+            <Crosshair className={`w-5 h-5 ${state.chaseFailMeter > 70 ? 'text-red-400' : 'text-fuchsia-300'}`} />
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-wider text-fuchsia-300 flex items-center gap-2">
+                {state.chasePhase === 'recovering' ? 'Signal resetting…' : 'Stay with the drone'}
+                <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">
+                  lock {state.chaseCheckpoint}/{Math.max(1, state.chaseCheckpointTotal - 1)}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className={`text-lg font-mono font-black ${
+                  state.chaseDistance > 50 ? 'text-red-400' : 'text-white'
+                }`}>{state.chaseDistance}m</span>
+                <span className="text-[10px] font-bold text-slate-400">band 14–36m</span>
+              </div>
+              <div className="w-44 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${state.chaseFailMeter > 70 ? 'bg-red-500' : 'bg-fuchsia-400'}`}
+                  style={{ width: `${state.chaseFailMeter}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {state.racePhase !== 'idle' && (
           <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
             state.racePhase === 'failed'

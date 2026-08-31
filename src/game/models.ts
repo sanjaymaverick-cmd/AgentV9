@@ -1151,6 +1151,53 @@ export function createChaosPursuitDrone(kind: 'search' | 'interceptor'): {
   return { group, rotors, coneMesh };
 }
 
+/** Story-chase cargo transport (spec §18) — bigger than an interceptor, still primitive. */
+export function createChaosTransportDrone(): { group: THREE.Group; rotors: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  group.name = 'CHAOS_TransportDrone';
+  const hullMat = new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.75, roughness: 0.3 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: '#0f172a', metalness: 0.6, roughness: 0.35 });
+  const glowMat = new THREE.MeshBasicMaterial({ color: '#f43f5e' });
+  const crateMat = new THREE.MeshStandardMaterial({ color: '#ca8a04', metalness: 0.4, roughness: 0.45 });
+
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.7, 3.6), hullMat);
+  hull.castShadow = true;
+  group.add(hull);
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 1.8), crateMat);
+  crate.position.y = -0.85;
+  group.add(crate);
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.12, 1.85), glowMat);
+  stripe.position.y = -0.35;
+  group.add(stripe);
+
+  const rotors: THREE.Mesh[] = [];
+  const bladeGeo = new THREE.BoxGeometry(1.5, 0.04, 0.16);
+  (
+    [
+      [1.6, 1.3],
+      [-1.6, 1.3],
+      [1.6, -1.3],
+      [-1.6, -1.3],
+    ] as [number, number][]
+  ).forEach(([x, z]) => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.12), darkMat);
+    arm.position.set(x * 0.45, 0.15, z * 0.45);
+    group.add(arm);
+    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.22, 8), darkMat);
+    pod.position.set(x, 0.28, z);
+    group.add(pod);
+    const blade = new THREE.Mesh(bladeGeo, glowMat);
+    blade.position.set(x, 0.42, z);
+    group.add(blade);
+    rotors.push(blade);
+  });
+
+  const eye = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.12, 0.12), glowMat);
+  eye.position.set(0, 0.1, 1.85);
+  group.add(eye);
+  return { group, rotors };
+}
+
 export function createChaosTracker(): { group: THREE.Group; pulse: THREE.Mesh } {
   const group = new THREE.Group();
   group.name = 'CHAOS_Tracker';

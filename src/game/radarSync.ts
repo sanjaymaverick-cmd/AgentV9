@@ -166,6 +166,9 @@ export class RadarSync {
     // 12. Live CHAOS pursuit units (search drone, interceptors, tracker, elite, roadblocks)
     e.chaosAlertManager.collectRadar(entities);
 
+    // 13. Story chase transport
+    e.chaseController.collectRadar(entities);
+
     e.state.radarEntities = entities;
   }
 }

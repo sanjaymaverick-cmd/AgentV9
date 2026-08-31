@@ -238,6 +238,7 @@ export class PlayerActions {
       // Check immediate EMP disable in radius (bots + CHAOS units + cameras)
       e.stealthAI.applyEMPRadius(origin, 12);
       e.chaosAlertManager.applyEMPRadius(origin, 12);
+      e.chaseController.applyEMPRadius(origin, 12);
     } else if (e.state.currentGadget === 'foam') {
       soundEngine.playFoam();
       e.setNotification('Foam Blaster Fired! (Traps bots & blocks doors)');

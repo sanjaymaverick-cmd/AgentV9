@@ -57,6 +57,7 @@ interface Internals {
   notifyState(): void;
   chaosAlertManager: { clear(): void; setLevel(level: number): void };
   raceManager: { start(raceId?: string): void };
+  chaseController: { onJumpToStep(index: number): void };
 }
 
 const ALL_DISGUISES: DisguiseType[] = [
@@ -162,8 +163,13 @@ export function attachDebugTools(engine: GameEngine): DebugTools {
       });
       e.bossDrone.group.visible = clamped >= 4;
 
-      const t = mission.steps[clamped].targetPosition;
-      teleport([t[0], Math.max(0, t[1] - 1), t[2] + 6]);
+      if (clamped === 2) {
+        teleport([8, 0, -88]);
+      } else {
+        const t = mission.steps[clamped].targetPosition;
+        teleport([t[0], Math.max(0, t[1] - 1), t[2] + 6]);
+      }
+      e.chaseController.onJumpToStep(clamped);
 
       e.setNotification(
         `[debug] Step ${clamped + 1}/${mission.steps.length}: ${mission.steps[clamped].title}`

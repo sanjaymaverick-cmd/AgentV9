@@ -177,7 +177,6 @@ export const CAMERA = {
 export const MISSION = {
   step1ReachDist: 15,
   step2ScanDist: 10,
-  step3FollowDist: 18,
   step4SpeedPathMinY: 6,
   step4SpeedPathDist: 15,
   step4StealthDist: 12,
@@ -206,3 +205,41 @@ export const DOWNTOWN_RACE_GATES: readonly (readonly [number, number, number])[]
   [30, 1.2, 30],
   [30, 1.2, 0],
 ];
+
+/**
+ * Motorcycle chase (spec §18) — see ChaseController.
+ * Speed adapts only when the player is TOO CLOSE (drone pulls away). It never
+ * slows down to wait — that's the unfair rubber-band the spec forbids.
+ */
+export const CHASE = {
+  storyStepIndex: 2,
+  cruiseSpeed: 14, // m/s — below V9 cruise (28) so a kid can catch up
+  closeSpeedMult: 1.2,
+  empSlowMult: 0.6,
+  empSlowSec: 4.5,
+  flyHeight: 9,
+  minBand: 14, // closer than this → drone edges forward
+  maxBand: 36, // comfortable follow distance
+  loseRadius: 58,
+  winRadius: 28, // must be this close at the last waypoint
+  failFillPerSec: 18, // ~5.5 s fully out of range to trip a recovery
+  failDrainPerSec: 28,
+  recoverHoldSec: 1.6,
+  maxRecoveries: 3,
+  obstacleBumpMaxSpeed: 8,
+  path: [
+    [0, 9, -100],
+    [12, 9, -68],
+    [0, 9, -36],
+    [0, 9, 8],
+    [42, 9, 8],
+    [72, 9, -16],
+    [92, 9, 12],
+    [85, 9, 28],
+  ] as readonly (readonly [number, number, number])[],
+  obstacles: [
+    [8, 0, -48],
+    [28, 0, 6],
+    [78, 0, -8],
+  ] as readonly (readonly [number, number, number])[],
+} as const;
