@@ -273,145 +273,145 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
         )}
       </div>
 
-      {/* RIGHT — look stacked above actions so the world center stays clear. */}
+      {/* RIGHT — dual-stick baseline: LOOK + Boost at the same height as move. Face buttons one row up. */}
       <div className="pointer-events-auto flex flex-col items-end gap-3">
-        <div className="flex flex-col items-center" data-hud="look">
-          <div
-            ref={lookBaseRef}
-            id="look-joystick-base"
-            onTouchStart={handleLookStart}
-            onTouchMove={handleLookMove}
-            onTouchEnd={handleLookEnd}
-            onTouchCancel={handleLookEnd}
-            className="touch-stick touch-stick-look"
+        <div className="flex items-center gap-3">
+          <button
+            id="touch-horn-btn"
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              engine.honkHorn();
+            }}
+            className="touch-btn"
+            title="Horn"
           >
-            <div
-              id="look-joystick-thumb"
-              style={{ transform: `translate(${lookPos.x}px, ${lookPos.y}px)` }}
-              className={`touch-thumb touch-thumb-sm flex items-center justify-center ${lookActive ? 'scale-110' : ''}`}
+            <Volume2 className="w-4 h-4" />
+            Horn
+          </button>
+          <button
+            id="touch-drift-btn"
+            type="button"
+            onPointerDown={() => {
+              triggerHaptic();
+              engine.input.drift = true;
+            }}
+            onPointerUp={() => (engine.input.drift = false)}
+            onPointerLeave={() => (engine.input.drift = false)}
+            className="touch-btn"
+            title="Drift"
+          >
+            <Sparkles className="w-4 h-4" />
+            Drift
+          </button>
+          {refueling ? (
+            <button
+              id="touch-refuel-btn"
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                engine.handleInteractAction();
+              }}
+              className="touch-btn text-hud-ok"
+              title="Refuel"
             >
-              <Eye className="w-3.5 h-3.5 text-hud-accent-fg" />
-            </div>
-          </div>
-          <span className="mt-1 text-[10px] font-semibold tracking-widest text-hud-muted">LOOK</span>
+              <BatteryCharging className="w-4 h-4" />
+              Refuel
+            </button>
+          ) : (
+            <button
+              id="touch-interact-btn"
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                engine.handleInteractAction();
+              }}
+              className="touch-btn"
+              title={isRiding ? 'Dismount' : 'Mount'}
+            >
+              <Wrench className="w-4 h-4" />
+              {isRiding ? 'Off' : 'Mount'}
+            </button>
+          )}
         </div>
 
-        <div className="flex flex-col items-end gap-3" data-hud="actions">
-          <div className="flex items-center gap-3">
-            <button
-              id="touch-horn-btn"
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                engine.honkHorn();
-              }}
-              className="touch-btn"
-              title="Horn"
-            >
-              <Volume2 className="w-4 h-4" />
-              Horn
-            </button>
-            <button
-              id="touch-drift-btn"
-              type="button"
-              onPointerDown={() => {
-                triggerHaptic();
-                engine.input.drift = true;
-              }}
-              onPointerUp={() => (engine.input.drift = false)}
-              onPointerLeave={() => (engine.input.drift = false)}
-              className="touch-btn"
-              title="Drift"
-            >
-              <Sparkles className="w-4 h-4" />
-              Drift
-            </button>
-            {refueling ? (
-              <button
-                id="touch-refuel-btn"
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  engine.handleInteractAction();
-                }}
-                className="touch-btn text-hud-ok"
-                title="Refuel"
-              >
-                <BatteryCharging className="w-4 h-4" />
-                Refuel
-              </button>
-            ) : (
-              <button
-                id="touch-interact-btn"
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  engine.handleInteractAction();
-                }}
-                className="touch-btn"
-                title={isRiding ? 'Dismount' : 'Mount'}
-              >
-                <Wrench className="w-4 h-4" />
-                {isRiding ? 'Off' : 'Mount'}
-              </button>
-            )}
-          </div>
+        <div className="flex items-end gap-3" data-hud="actions">
+          <button
+            id="gadget-cycle-btn"
+            type="button"
+            onClick={cycleGadget}
+            className="touch-btn touch-btn-lg"
+            title={`Gadget: ${gadget.label} — tap to cycle`}
+          >
+            <GadgetIcon className="w-5 h-5" />
+            {gadget.label}
+          </button>
+          <button
+            id="touch-gadget-btn"
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              engine.fireGadget();
+            }}
+            className="touch-btn touch-btn-lg"
+            title="Fire gadget"
+          >
+            <Crosshair className="w-5 h-5" />
+            Fire
+          </button>
+          <button
+            id="touch-jump-btn"
+            type="button"
+            onPointerDown={() => {
+              triggerHaptic();
+              engine.input.jump = true;
+              engine.handleJumpOrBrake();
+            }}
+            onPointerUp={() => (engine.input.jump = false)}
+            className="touch-btn touch-btn-lg"
+            title="Jump"
+          >
+            <Zap className="w-5 h-5" />
+            Jump
+          </button>
+        </div>
 
-          <div className="flex items-end gap-3">
-            <button
-              id="gadget-cycle-btn"
-              type="button"
-              onClick={cycleGadget}
-              className="touch-btn touch-btn-lg"
-              title={`Gadget: ${gadget.label} — tap to cycle`}
+        <div className="flex items-end gap-3">
+          <div className="flex flex-col items-center" data-hud="look">
+            <div
+              ref={lookBaseRef}
+              id="look-joystick-base"
+              onTouchStart={handleLookStart}
+              onTouchMove={handleLookMove}
+              onTouchEnd={handleLookEnd}
+              onTouchCancel={handleLookEnd}
+              className="touch-stick touch-stick-look"
+              title="Look"
             >
-              <GadgetIcon className="w-5 h-5" />
-              {gadget.label}
-            </button>
-            <button
-              id="touch-gadget-btn"
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                engine.fireGadget();
-              }}
-              className="touch-btn touch-btn-lg"
-              title="Fire gadget"
-            >
-              <Crosshair className="w-5 h-5" />
-              Fire
-            </button>
-            <button
-              id="touch-jump-btn"
-              type="button"
-              onPointerDown={() => {
-                triggerHaptic();
-                engine.input.jump = true;
-                engine.handleJumpOrBrake();
-              }}
-              onPointerUp={() => (engine.input.jump = false)}
-              className="touch-btn touch-btn-lg"
-              title="Jump"
-            >
-              <Zap className="w-5 h-5" />
-              Jump
-            </button>
-            <button
-              id="touch-boost-btn"
-              type="button"
-              onPointerDown={() => {
-                triggerHaptic();
-                engine.input.boost = true;
-              }}
-              onPointerUp={() => (engine.input.boost = false)}
-              onPointerLeave={() => (engine.input.boost = false)}
-              className="touch-btn touch-btn-lg touch-btn-warn"
-              title="Nitro"
-            >
-              <Flame className="w-5 h-5" />
-              Boost
-            </button>
+              <div
+                id="look-joystick-thumb"
+                style={{ transform: `translate(${lookPos.x}px, ${lookPos.y}px)` }}
+                className={`touch-thumb touch-thumb-sm flex items-center justify-center ${lookActive ? 'scale-110' : ''}`}
+              >
+                <Eye className="w-3.5 h-3.5 text-hud-accent-fg" />
+              </div>
+            </div>
           </div>
+          <button
+            id="touch-boost-btn"
+            type="button"
+            onPointerDown={() => {
+              triggerHaptic();
+              engine.input.boost = true;
+            }}
+            onPointerUp={() => (engine.input.boost = false)}
+            onPointerLeave={() => (engine.input.boost = false)}
+            className="touch-btn touch-btn-lg touch-btn-warn"
+            title="Nitro"
+          >
+            <Flame className="w-5 h-5" />
+            Boost
+          </button>
         </div>
       </div>
     </div>

@@ -18,8 +18,8 @@ Map, Missions, Garage, Guide, Settings, Cycle camera, Reset bike, Stick vs D-pad
 
 ## Touch
 
-- **Left:** move stick or D-pad
-- **Right:** LOOK stacked *above* Horn / Drift / Mount, then Gadget-cycle / Fire / Jump / Boost
+- **Left:** move stick or D-pad, bottom corner
+- **Right:** LOOK + Boost on the same baseline as the stick (dual analog). Cycle / Fire / Jump one row up. Horn / Drift / Mount above that.
 - Camera, reset, and stick-vs-dpad live in Menu — not a second top bar
 - Duplicate Mount / Talk / Refuel HUD prompts hide while touch is on
 - Radar: HDG + range cycle sit on the 132px disc (tap range to cycle 75 / 140 / 260 m)
