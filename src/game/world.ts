@@ -15,6 +15,7 @@ import {
 } from './models';
 import { DOWNTOWN_RACE_GATES } from './tunables';
 import { QUALITY_PRESETS } from './quality';
+import { mergeMeshes } from './mergeStatic';
 import { SecurityBot, CollectibleItem, CityPOI, NPCLocal, RestrictedZone } from '../types/game';
 import {
   addNightSky,
@@ -226,6 +227,9 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     { x: 85, z: 0, w: 14, d: 260, isVertical: true },
   ];
 
+  const yellowMarks: THREE.Mesh[] = [];
+  const whiteMarks: THREE.Mesh[] = [];
+
   roads.forEach((rd) => {
     // 1. Road Surface
     const rdMesh = new THREE.Mesh(new THREE.PlaneGeometry(rd.w, rd.d), roadMat);
@@ -240,7 +244,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
         const line = new THREE.Mesh(new THREE.PlaneGeometry(0.18, rd.d), yellowLineMat);
         line.rotation.x = -Math.PI / 2;
         line.position.set(rd.x + offset, 0.03, rd.z);
-        scene.add(line);
+        yellowMarks.push(line);
       });
 
       // White Dashed Lane Dividers (Outer lanes)
@@ -249,7 +253,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
           const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 5.0), whiteMarkMat);
           dash.rotation.x = -Math.PI / 2;
           dash.position.set(rd.x + laneX, 0.035, rd.z + lz);
-          scene.add(dash);
+          whiteMarks.push(dash);
         }
       });
     } else {
@@ -257,7 +261,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
         const line = new THREE.Mesh(new THREE.PlaneGeometry(rd.w, 0.18), yellowLineMat);
         line.rotation.x = -Math.PI / 2;
         line.position.set(rd.x, 0.03, rd.z + offset);
-        scene.add(line);
+        yellowMarks.push(line);
       });
 
       // White Dashed Lane Dividers (Outer lanes)
@@ -266,11 +270,16 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
           const dash = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 0.18), whiteMarkMat);
           dash.rotation.x = -Math.PI / 2;
           dash.position.set(rd.x + lx, 0.035, rd.z + laneZ);
-          scene.add(dash);
+          whiteMarks.push(dash);
         }
       });
     }
   });
+
+  const yellowMerged = mergeMeshes(yellowMarks, yellowLineMat);
+  if (yellowMerged) scene.add(yellowMerged);
+  const whiteMerged = mergeMeshes(whiteMarks, whiteMarkMat);
+  if (whiteMerged) scene.add(whiteMerged);
 
   // ---------------------------------------------------
   // 4. ELEVATED FOOTPATHS / SIDEWALKS & CURBS
@@ -328,6 +337,7 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     { x: 0, z: 76, isVertical: false },
   ];
 
+  const zebraMarks: THREE.Mesh[] = [];
   crosswalks.forEach((cw) => {
     const barCount = 7;
     const barWidth = 0.8;
@@ -339,12 +349,12 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
         const stripe = new THREE.Mesh(new THREE.PlaneGeometry(barLen, barWidth), crosswalkMat);
         stripe.rotation.x = -Math.PI / 2;
         stripe.position.set(cw.x, 0.04, cw.z + offset);
-        scene.add(stripe);
+        zebraMarks.push(stripe);
       } else {
         const stripe = new THREE.Mesh(new THREE.PlaneGeometry(barWidth, barLen), crosswalkMat);
         stripe.rotation.x = -Math.PI / 2;
         stripe.position.set(cw.x + offset, 0.04, cw.z);
-        scene.add(stripe);
+        zebraMarks.push(stripe);
       }
     }
 
@@ -353,6 +363,8 @@ export function buildVelocityCity(scene: THREE.Scene): WorldObjects {
     signal1.position.set(cw.x + (cw.isVertical ? 4.5 : -5.5), 0.22, cw.z + (cw.isVertical ? -5.5 : 4.5));
     scene.add(signal1);
   });
+  const zebraMerged = mergeMeshes(zebraMarks, crosswalkMat);
+  if (zebraMerged) scene.add(zebraMerged);
 
   // ---------------------------------------------------
   // 6. CENTRAL FOUNTAIN & PLAZA

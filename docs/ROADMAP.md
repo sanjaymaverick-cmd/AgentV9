@@ -59,8 +59,9 @@ The game is **draw-call bound**. **Done when** the overlay holds min FPS ≥ 30 
 downtown on the 1600×2560 tablet.
 
 ### D1 — instancing / merge static city *(spec §25)*
-Do this **only if** B4 on the tablet still misses 30. Shared geometry already exists;
-each Mesh is still a draw.
+Road dashes, zebra stripes and yellow medians are **one draw each** (merged at boot).
+Building boxes are single-material (was 6 draws). Bike wheels dropped 8 tread-torus
+meshes. Remaining: tree/light InstancedMesh if tablet FPS is still under 30.
 
 ### D2 — code splitting
 Initial `gameEngine` chunk ~729 KB (~196 KB gzip). Target < 500 KB raw.

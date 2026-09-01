@@ -386,15 +386,6 @@ export function createV9Motorcycle(custom: VehicleCustomization): {
     tireMesh.castShadow = true;
     wGroup.add(tireMesh);
 
-    // Tread Grooves (Multiple Torus slices)
-    for (let r = 0; r < 8; r++) {
-      const treadRibGeo = new THREE.TorusGeometry(0.395, 0.015, 6, 20);
-      const treadRib = new THREE.Mesh(treadRibGeo, darkSteelMat);
-      treadRib.rotation.y = (r * Math.PI) / 4;
-      wGroup.add(treadRib);
-    }
-
-    // Forged Alloy 5-Spoke Wheel Rim
     const hubCenterGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.18, 12);
     hubCenterGeo.rotateX(Math.PI / 2);
     const hubCenter = new THREE.Mesh(hubCenterGeo, rimAlloyMat);

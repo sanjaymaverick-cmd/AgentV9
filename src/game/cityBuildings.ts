@@ -301,11 +301,9 @@ export function createCityBuilding(opts: CityBuildingOpts): THREE.Group {
   const ry = Math.max(2, Math.round(h / 5));
   const matX = facadeMaterial(facade, rz, ry);
   const matZ = facadeMaterial(facade, rx, ry);
-  const roofMat = roofMaterial();
-  const bottomMat = darkMat();
 
   const bodyH = h >= 36 ? h * 0.62 : h;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(w, bodyH, d), [matX, matX, roofMat, bottomMat, matZ, matZ]);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, bodyH, d), matZ);
   body.position.y = bodyH / 2;
   body.castShadow = true;
   body.receiveShadow = true;
@@ -315,7 +313,7 @@ export function createCityBuilding(opts: CityBuildingOpts): THREE.Group {
     const tw = w * 0.72;
     const td = d * 0.72;
     const th = h - bodyH;
-    const tower = new THREE.Mesh(new THREE.BoxGeometry(tw, th, td), [matX, matX, roofMat, bottomMat, matZ, matZ]);
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(tw, th, td), matX);
     tower.position.y = bodyH + th / 2;
     tower.castShadow = true;
     group.add(tower);
@@ -396,9 +394,7 @@ export function createAcademyHQ(): THREE.Group {
   group.position.set(-80, 0, -50);
 
   const facade = createFacadeTexture('tech', 1);
-  const matX = facadeMaterial(facade, 3, 3);
   const matZ = facadeMaterial(facade, 4, 3);
-  const roofMat = roofMaterial();
   const curtain = createFacadeTexture('tech', 99);
   const curtainMap = curtain.clone();
   curtainMap.wrapS = THREE.RepeatWrapping;
@@ -423,7 +419,7 @@ export function createAcademyHQ(): THREE.Group {
   });
   const steel = steelMat();
 
-  const base = new THREE.Mesh(new THREE.BoxGeometry(34, 14, 28), [matX, matX, roofMat, darkMat(), matZ, matZ]);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(34, 14, 28), matZ);
   base.position.y = 7;
   base.castShadow = true;
   base.receiveShadow = true;
