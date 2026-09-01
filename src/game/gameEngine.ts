@@ -137,6 +137,8 @@ export interface EngineInputState {
   analogSteer: number;
   /** -1 (full brake/reverse) .. +1 (full throttle) */
   analogThrottle: number;
+  analogLookX: number;
+  analogLookY: number;
 }
 
 /** Just the digital (boolean) channels of EngineInputState — safe to set from a button. */
@@ -222,8 +224,10 @@ export class GameEngine {
     gadget: false,
     sneak: false,
     drift: false,
-    analogSteer: 0, // -1 to +1 from touch joystick
-    analogThrottle: 0, // -1 to +1 from touch joystick
+    analogSteer: 0,
+    analogThrottle: 0,
+    analogLookX: 0,
+    analogLookY: 0,
   };
 
   // Foam & Projectiles

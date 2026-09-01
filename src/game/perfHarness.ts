@@ -45,7 +45,9 @@ export interface AgentV9Probe {
   setThrottle(on: boolean): void;
   /** QA: held keys, same mapping as the keyboard. `[]` clears. */
   setKeys(codes: string[]): void;
+  setLook(x: number, y: number): void;
   getYaw(): number;
+  getCameraYaw(): number;
   getSpeed(): number;
   setYaw(rad: number): void;
   getPlayerPos(): [number, number, number];
@@ -175,6 +177,8 @@ export class PerfHarness {
     e.input.right = has('KeyD') || has('ArrowRight');
     e.input.analogThrottle = 0;
     e.input.analogSteer = 0;
+    e.input.analogLookX = 0;
+    e.input.analogLookY = 0;
   }
 
   private attach() {
@@ -190,7 +194,12 @@ export class PerfHarness {
       teleport: (pos) => this.teleport(pos),
       setThrottle: (on) => this.setThrottle(on),
       setKeys: (codes) => this.setKeys(codes),
+      setLook: (x, y) => {
+        e.input.analogLookX = x;
+        e.input.analogLookY = y;
+      },
       getYaw: () => (e.state.isRiding ? e.bikeRot : e.playerRot),
+      getCameraYaw: () => e.cameraYaw,
       setYaw: (rad: number) => {
         e.bikeRot = rad;
         e.playerRot = rad;

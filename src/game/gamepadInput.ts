@@ -86,6 +86,8 @@ export class GamepadInput {
     const throttle = triggerVal(BTN.RT);
     const brake = triggerVal(BTN.LT);
     input.analogThrottle = throttle > 0 ? throttle : brake > 0 ? -brake : 0;
+    input.analogLookX = axisVal(pad.axes[2] ?? 0);
+    input.analogLookY = -axisVal(pad.axes[3] ?? 0);
 
     // --- Held booleans ---
     input.boost = pressed(BTN.RB);

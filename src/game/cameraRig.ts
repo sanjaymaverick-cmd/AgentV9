@@ -8,15 +8,15 @@ import { gatherCollisionBoxes } from './world';
 
 /**
  * Camera system (spec §8) — four modes (chase / action / FPV / tactical) with
- * speed-sensitive framing, plus drag/swipe look.
+ * speed-sensitive framing, plus free look (drag, look-pad, right stick).
  *
- * Camera heading (`cameraYaw`) is world-space and independent of the agent facing.
- * Looking around while standing still does not snap back; recentering only happens
- * when the followed subject is actually moving.
+ * Look is an offset on top of the followed heading. On foot it never auto-snaps.
+ * On the bike it only eases back behind V9 after look is released.
  */
 export class CameraRig {
   private readonly targetPos = new THREE.Vector3();
   private readonly lookAt = new THREE.Vector3();
+  private lookHold = 0;
 
   constructor(private e: GameEngine) {}
 
@@ -53,6 +53,7 @@ export class CameraRig {
         CAMERA.pitchOffsetMin,
         CAMERA.pitchOffsetMax
       );
+      this.lookHold = CAMERA.lookHoldSec;
     };
 
     const onPointerUp = (ev: PointerEvent) => {
@@ -83,6 +84,7 @@ export class CameraRig {
     e.cameraYaw = this.facingYaw();
     e.orbitYawOffset = 0;
     e.orbitPitchOffset = 0;
+    this.lookHold = 0;
   }
 
   setMode(mode: CameraMode) {
@@ -118,11 +120,38 @@ export class CameraRig {
     const facing = this.facingYaw();
     if (!Number.isFinite(e.cameraYaw)) e.cameraYaw = facing;
 
-    // Recenter only while the *followed* subject is moving — leftover bikeSpeed
-    // after a dismount used to yank look-around back to the agent's face.
-    if (this.isSubjectMoving() && !e.isPointerDragging) {
-      e.cameraYaw = lerpAngle(e.cameraYaw, facing, Math.min(1, dt * CAMERA.recenterLerpPerSec));
-      e.orbitPitchOffset = THREE.MathUtils.lerp(e.orbitPitchOffset, 0, dt * CAMERA.recenterLerpPerSec);
+    const stickLook =
+      Math.hypot(e.input.analogLookX, e.input.analogLookY) > CAMERA.lookDeadzone;
+    if (stickLook) {
+      e.cameraYaw -= e.input.analogLookX * CAMERA.stickYawPerSec * dt;
+      e.orbitPitchOffset = THREE.MathUtils.clamp(
+        e.orbitPitchOffset + e.input.analogLookY * CAMERA.stickPitchPerSec * dt,
+        CAMERA.pitchOffsetMin,
+        CAMERA.pitchOffsetMax,
+      );
+      this.lookHold = CAMERA.lookHoldSec;
+    } else if (e.isPointerDragging) {
+      this.lookHold = CAMERA.lookHoldSec;
+    } else {
+      this.lookHold = Math.max(0, this.lookHold - dt);
+    }
+
+    const looking = e.isPointerDragging || stickLook;
+    if (
+      shouldChaseFollow({
+        riding: e.state.isRiding && !e.state.isMiniDroneActive,
+        looking,
+        lookHold: this.lookHold,
+        bikeSpeed: e.bikeSpeed,
+        minSpeed: CAMERA.recenterMinBikeSpeed,
+      })
+    ) {
+      e.cameraYaw = lerpAngle(e.cameraYaw, facing, Math.min(1, dt * CAMERA.chaseFollowLerpPerSec));
+      e.orbitPitchOffset = THREE.MathUtils.lerp(
+        e.orbitPitchOffset,
+        0,
+        dt * CAMERA.pitchReturnLerpPerSec,
+      );
     }
     e.orbitYawOffset = wrapAngle(e.cameraYaw - facing);
 
@@ -173,7 +202,7 @@ export class CameraRig {
     }
 
     const targetPos = this.targetPos.set(targetCamX + vibX, targetCamY + vibY, targetCamZ);
-    const lerpSpeed = e.isPointerDragging
+    const lerpSpeed = looking
       ? CAMERA.posLerpLook
       : mode === 'fpv'
       ? CAMERA.posLerpFPV
@@ -203,19 +232,21 @@ export class CameraRig {
     e.camera.fov = THREE.MathUtils.lerp(e.camera.fov, targetFOV, dt * CAMERA.fovLerpPerSec);
     e.camera.updateProjectionMatrix();
   }
+}
 
-  private isSubjectMoving(): boolean {
-    const e = this.e;
-    const stick =
-      Math.abs(e.input.analogThrottle) > CAMERA.moveDeadzone ||
-      Math.abs(e.input.analogSteer) > CAMERA.moveDeadzone;
-    const keys = e.input.forward || e.input.backward || e.input.left || e.input.right;
-    if (e.state.isMiniDroneActive) return keys || stick;
-    if (e.state.isRiding) {
-      return keys || stick || Math.abs(e.bikeSpeed) > CAMERA.recenterMinBikeSpeed;
-    }
-    return keys || stick;
-  }
+export function shouldChaseFollow(opts: {
+  riding: boolean;
+  looking: boolean;
+  lookHold: number;
+  bikeSpeed: number;
+  minSpeed: number;
+}): boolean {
+  return (
+    opts.riding &&
+    !opts.looking &&
+    opts.lookHold <= 0 &&
+    Math.abs(opts.bikeSpeed) > opts.minSpeed
+  );
 }
 
 export function wrapAngle(a: number): number {

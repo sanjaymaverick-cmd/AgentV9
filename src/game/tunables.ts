@@ -217,15 +217,19 @@ export const CHAOS = {
 
 /** Chase / action / FPV / tactical camera feel — see CameraRig. */
 export const CAMERA = {
-  dragYawSensitivity: 0.008,
-  dragPitchSensitivity: 0.006,
-  pitchOffsetMin: -0.4,
-  pitchOffsetMax: 0.7,
-  /** Only used while the followed subject is actually moving — never while standing still. */
-  recenterLerpPerSec: 2.2,
+  dragYawSensitivity: 0.01,
+  dragPitchSensitivity: 0.008,
+  stickYawPerSec: 2.6,
+  stickPitchPerSec: 1.8,
+  pitchOffsetMin: -0.55,
+  pitchOffsetMax: 0.85,
+  /** Seconds look stays free after you let go of drag / right stick. */
+  lookHoldSec: 1.15,
+  /** Bike chase follow after lookHold — slow on purpose so it does not fight orbit. */
+  chaseFollowLerpPerSec: 1.15,
+  pitchReturnLerpPerSec: 0.9,
   recenterMinBikeSpeed: 4,
-  /** Stick / trigger must exceed this before look-around recenters. */
-  moveDeadzone: 0.28,
+  lookDeadzone: 0.18,
 
   posLerpDefault: 11,
   posLerpLook: 20,

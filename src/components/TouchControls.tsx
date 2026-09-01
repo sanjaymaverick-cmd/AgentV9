@@ -12,6 +12,7 @@ import {
   Camera, 
   RotateCcw, 
   Sparkles,
+  Eye,
   Navigation,
   Move,
   Fuel,
@@ -38,6 +39,10 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const joystickBaseRef = useRef<HTMLDivElement>(null);
   const touchIdRef = useRef<number | null>(null);
+  const [lookActive, setLookActive] = useState(false);
+  const [lookPos, setLookPos] = useState({ x: 0, y: 0 });
+  const lookBaseRef = useRef<HTMLDivElement>(null);
+  const lookTouchIdRef = useRef<number | null>(null);
 
   // Sync settings if changed externally
   useEffect(() => {
@@ -132,6 +137,62 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
     engine.input.backward = normY > 0.3;
     engine.input.left = normX < -0.3;
     engine.input.right = normX > 0.3;
+  };
+
+  const handleLookStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    lookTouchIdRef.current = touch.identifier;
+    setLookActive(true);
+    updateLookPos(touch.clientX, touch.clientY);
+  };
+
+  const handleLookMove = (e: React.TouchEvent) => {
+    if (!lookActive) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === lookTouchIdRef.current) {
+        updateLookPos(touch.clientX, touch.clientY);
+        break;
+      }
+    }
+  };
+
+  const handleLookEnd = (e: React.TouchEvent) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === lookTouchIdRef.current) {
+        lookTouchIdRef.current = null;
+        setLookActive(false);
+        setLookPos({ x: 0, y: 0 });
+        if (engine) {
+          engine.input.analogLookX = 0;
+          engine.input.analogLookY = 0;
+        }
+        break;
+      }
+    }
+  };
+
+  const updateLookPos = (clientX: number, clientY: number) => {
+    if (!lookBaseRef.current || !engine) return;
+    const rect = lookBaseRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    const maxRadius = rect.width / 2;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const clampedDist = Math.min(dist, maxRadius);
+    const angle = Math.atan2(dy, dx);
+    const normX = (clampedDist / maxRadius) * Math.cos(angle);
+    const normY = (clampedDist / maxRadius) * Math.sin(angle);
+    setLookPos({
+      x: normX * (maxRadius * 0.75),
+      y: normY * (maxRadius * 0.75),
+    });
+    engine.input.analogLookX = normX;
+    engine.input.analogLookY = -normY;
   };
 
   const toggleControlMode = () => {
@@ -273,6 +334,30 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
               <div />
             </div>
           )}
+        </div>
+
+        {/* LOOK pad — free orbit, does not steal the move stick */}
+        <div className="pointer-events-auto flex flex-col items-center mb-2">
+          <div
+            ref={lookBaseRef}
+            id="look-joystick-base"
+            onTouchStart={handleLookStart}
+            onTouchMove={handleLookMove}
+            onTouchEnd={handleLookEnd}
+            onTouchCancel={handleLookEnd}
+            className="relative w-28 h-28 rounded-full bg-slate-950/60 backdrop-blur-md border-2 border-violet-400/50 flex items-center justify-center shadow-xl shadow-violet-950/50 touch-none active:border-violet-300"
+          >
+            <div
+              id="look-joystick-thumb"
+              style={{ transform: `translate(${lookPos.x}px, ${lookPos.y}px)` }}
+              className={`w-11 h-11 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-600 border-2 border-white/80 shadow-lg flex items-center justify-center pointer-events-none ${
+                lookActive ? 'scale-110 ring-4 ring-violet-400/40' : 'scale-100'
+              }`}
+            >
+              <Eye className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <span className="mt-1 text-[9px] font-black tracking-widest text-violet-200/80">LOOK</span>
         </div>
 
         {/* RIGHT: Action Cluster (Drive, Drift, Horn, Jump, Gadget, Nitro) */}
