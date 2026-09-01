@@ -38,7 +38,7 @@ export class GamepadInput {
   private onConnect = () => {
     this.connected = true;
     this.e.state.gamepadConnected = true;
-    this.e.setNotification('🎮 Controller connected — touch controls hidden');
+    this.e.setNotification('Controller connected — touch controls hidden');
     this.e.notifyState();
   };
 
@@ -53,7 +53,7 @@ export class GamepadInput {
     this.e.input.analogSteer = 0;
     this.e.input.analogThrottle = 0;
     this.prevPressed.clear();
-    this.e.setNotification('🎮 Controller disconnected — touch controls back');
+    this.e.setNotification('Controller disconnected — touch controls back');
     this.e.notifyState();
   };
 

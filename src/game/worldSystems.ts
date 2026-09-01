@@ -370,7 +370,7 @@ export class WorldSystems {
 
       if (distToDest < 6.0) {
         soundEngine.playWaypoint();
-        e.setNotification(`🎯 Arrived at GPS Destination: ${e.state.activeGPSRoute.destinationName}`);
+        e.setNotification(`Arrived at ${e.state.activeGPSRoute.destinationName}`);
         e.clearGPSRoute();
       }
     }
@@ -451,7 +451,7 @@ export class WorldSystems {
             e.state.isRefueling = false;
             soundEngine.playRefuelComplete();
             e.addXP(25, 'V9 Plasma Fast-Charge');
-            e.setNotification('⚡ V9 Energy Cells 100% Fully Charged! (+25 XP)');
+            e.setNotification('V9 energy cells fully charged (+25 XP)');
             soundEngine.speak('V9 energy cells fully restored and stabilized!', 'kira');
           }
         } else {

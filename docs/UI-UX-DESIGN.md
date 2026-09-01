@@ -10,7 +10,7 @@ Cyan is the single accent. No emoji in chrome. Tap targets 44px. Safe-area paddi
 | Top-left | Identity (rank, speed, energy, nitro) + collapsible brief + radio | Eat the radar column |
 | Top-center | GPS / live events only | Sit on identity or radar on phones — below identity under 700px |
 | Top-right | One **Menu** stacked above a 132px radar | Five icon buttons in a column |
-| Bottom | Gadgets (+ silent). Lifted 13rem when touch is on | Sit on the sticks |
+| Bottom | Keyboard: gadget row. Touch: cycle chip next to Fire; silent on identity | Sit on the sticks |
 
 ## Overflow menu
 
@@ -19,9 +19,11 @@ Map, Missions, Garage, Guide, Settings, Cycle camera, Reset bike, Stick vs D-pad
 ## Touch
 
 - **Left:** move stick or D-pad
-- **Right:** LOOK stacked *above* Horn / Drift / Mount, then Fire / Jump / Boost
+- **Right:** LOOK stacked *above* Horn / Drift / Mount, then Gadget-cycle / Fire / Jump / Boost
 - Camera, reset, and stick-vs-dpad live in Menu — not a second top bar
 - Duplicate Mount / Talk / Refuel HUD prompts hide while touch is on
+- Radar: HDG + range cycle sit on the 132px disc (tap range to cycle 75 / 140 / 260 m)
+- Modals (Map, Missions, Garage, Guide, Settings) use `HudModal` and the same hud tokens
 
 ## Tokens
 

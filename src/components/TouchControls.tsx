@@ -12,9 +12,20 @@ import {
   Sparkles,
   Eye,
   BatteryCharging,
+  Shield,
+  Gauge,
 } from 'lucide-react';
 import type { GameEngine, EngineButtonInput } from '../game/gameEngine';
 import { GameSettings } from '../types/game';
+import type { GadgetType } from '../types/game';
+
+const TOUCH_GADGETS: { id: GadgetType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'emp', label: 'EMP', icon: Zap },
+  { id: 'foam', label: 'Foam', icon: Shield },
+  { id: 'drone', label: 'Drone', icon: Crosshair },
+  { id: 'hologram', label: 'Holo', icon: Sparkles },
+  { id: 'remote_v9', label: 'Remote', icon: Gauge },
+];
 
 interface TouchControlsProps {
   engine: GameEngine | null;
@@ -173,6 +184,14 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
   };
 
   const refueling = engine.state.nearInteraction === 'refuel' || engine.state.isRefueling;
+  const gadget = TOUCH_GADGETS.find((g) => g.id === engine.state.currentGadget) ?? TOUCH_GADGETS[0];
+  const GadgetIcon = gadget.icon;
+  const cycleGadget = () => {
+    const i = TOUCH_GADGETS.findIndex((g) => g.id === engine.state.currentGadget);
+    const next = TOUCH_GADGETS[(i + 1) % TOUCH_GADGETS.length];
+    triggerHaptic();
+    engine.switchGadget(next.id);
+  };
 
   return (
     <div
@@ -339,6 +358,16 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           </div>
 
           <div className="flex items-end gap-3">
+            <button
+              id="gadget-cycle-btn"
+              type="button"
+              onClick={cycleGadget}
+              className="touch-btn touch-btn-lg"
+              title={`Gadget: ${gadget.label} — tap to cycle`}
+            >
+              <GadgetIcon className="w-5 h-5" />
+              {gadget.label}
+            </button>
             <button
               id="touch-gadget-btn"
               type="button"

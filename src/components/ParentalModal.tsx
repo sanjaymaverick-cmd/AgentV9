@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, ShieldCheck, Clock, Volume2, Compass, HeartHandshake, Gauge } from 'lucide-react';
+import { ShieldCheck, Clock, Volume2, Compass, HeartHandshake, Gauge } from 'lucide-react';
 import { GameSettings } from '../types/game';
 import { soundEngine } from '../game/audio';
+import { HudModal } from './HudModal';
 
 interface ParentalModalProps {
   settings: GameSettings;
@@ -15,223 +16,164 @@ export const ParentalModal: React.FC<ParentalModalProps> = ({
   onClose,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md">
-      <div className="bg-slate-900 border border-cyan-500/40 rounded-3xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl shadow-cyan-950/60 overflow-hidden">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">Parental & Gameplay Settings</h2>
-              <p className="text-xs text-slate-400">Child-first safety, session timers, and accessibility controls</p>
-            </div>
+    <HudModal
+      title="Parental & gameplay"
+      subtitle="Session timer, quality, and accessibility"
+      icon={ShieldCheck}
+      onClose={onClose}
+      footer={
+        <button type="button" onClick={onClose} className="hud-primary">
+          Save & close
+        </button>
+      }
+    >
+      <div className="space-y-6">
+        <div className="hud-panel p-4 flex items-start gap-3">
+          <HeartHandshake className="w-5 h-5 text-hud-ok shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-xs font-semibold text-hud-fg">Made for ages 8–12</h4>
+            <p className="text-xs text-hud-muted mt-0.5 leading-relaxed">
+              Zero violence, no loot boxes, no ads, and fully offline.
+            </p>
           </div>
-          <button
-            onClick={onClose}
-            className="hud-modal-close"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          
-          {/* Child-Safe Promise Banner */}
-          <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 flex items-start gap-3">
-            <HeartHandshake className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-xs font-black text-emerald-300 uppercase tracking-wider">Child-First Product Guarantee</h4>
-              <p className="text-xs text-emerald-100/80 mt-0.5 leading-relaxed">
-                Agent V9 is designed specifically for children ages 8–12 with zero violence, no loot boxes, no advertisements, and 100% offline-ready play.
-              </p>
-            </div>
-          </div>
-
-          {/* Session Timer */}
-          <div>
-            <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2.5">
-              <Clock className="w-4 h-4 text-cyan-400" /> Play Session Reminder
-            </label>
-            <div className="grid grid-cols-4 gap-2.5">
-              {[
-                { min: 0, label: 'Off' },
-                { min: 15, label: '15 Mins' },
-                { min: 30, label: '30 Mins' },
-                { min: 45, label: '45 Mins' },
-              ].map((item) => (
-                <button
-                  key={item.min}
-                  onClick={() => onUpdateSettings({ ...settings, timeLimitMinutes: item.min })}
-                  className={`py-2.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                    settings.timeLimitMinutes === item.min
-                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-black shadow-md'
-                      : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Touch Controls Mode */}
-          <div>
-            <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2.5">
-              <Compass className="w-4 h-4 text-cyan-400" /> Touch & Movement Controls
-            </label>
-            <div className="grid grid-cols-2 gap-2.5">
+        <div>
+          <label className="text-[10px] font-semibold text-hud-muted uppercase tracking-wider flex items-center gap-2 mb-2.5">
+            <Clock className="w-4 h-4 text-hud-accent" /> Play session reminder
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { min: 0, label: 'Off' },
+              { min: 15, label: '15 min' },
+              { min: 30, label: '30 min' },
+              { min: 45, label: '45 min' },
+            ].map((item) => (
               <button
-                onClick={() => onUpdateSettings({ ...settings, touchControlMode: 'joystick' })}
-                className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
-                  settings.touchControlMode === 'joystick'
-                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 font-bold shadow-md'
-                    : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
-                }`}
+                key={item.min}
+                type="button"
+                onClick={() => onUpdateSettings({ ...settings, timeLimitMinutes: item.min })}
+                className={settings.timeLimitMinutes === item.min ? 'hud-chip-on hud-chip' : 'hud-chip'}
               >
-                <div className="text-xs font-black flex items-center justify-between">
-                  <span>Virtual Analog Stick</span>
-                  {settings.touchControlMode === 'joystick' && <span className="text-[10px] bg-cyan-500 text-slate-950 px-1.5 py-0.5 rounded font-black">ACTIVE</span>}
-                </div>
-                <span className="text-[11px] text-slate-400">Smooth 360° steering & proportional throttle</span>
+                {item.label}
               </button>
-
-              <button
-                onClick={() => onUpdateSettings({ ...settings, touchControlMode: 'dpad' })}
-                className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
-                  settings.touchControlMode === 'dpad'
-                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 font-bold shadow-md'
-                    : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <div className="text-xs font-black flex items-center justify-between">
-                  <span>Classic Directional D-Pad</span>
-                  {settings.touchControlMode === 'dpad' && <span className="text-[10px] bg-cyan-500 text-slate-950 px-1.5 py-0.5 rounded font-black">ACTIVE</span>}
-                </div>
-                <span className="text-[11px] text-slate-400">Crisp discrete arrow buttons for easy steering</span>
-              </button>
-            </div>
+            ))}
           </div>
+        </div>
 
-          {/* Graphics Quality (spec §26) */}
-          <div>
-            <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-2.5">
-              <Gauge className="w-4 h-4 text-cyan-400" /> Graphics Quality
-            </label>
-            <div className="grid grid-cols-3 gap-2.5">
-              {([
-                { level: 'low', label: 'Low', hint: 'Best speed' },
-                { level: 'medium', label: 'Medium', hint: 'Balanced' },
-                { level: 'high', label: 'High', hint: 'Best looks' },
-              ] as const).map((item) => (
-                <button
-                  key={item.level}
-                  onClick={() => onUpdateSettings({ ...settings, qualityLevel: item.level })}
-                  className={`py-2.5 rounded-xl border text-xs font-bold transition cursor-pointer flex flex-col items-center gap-0.5 ${
-                    settings.qualityLevel === item.level
-                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-black shadow-md'
-                      : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  <span className={`text-[10px] font-semibold ${settings.qualityLevel === item.level ? 'text-slate-900/70' : 'text-slate-500'}`}>
-                    {item.hint}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-1.5 font-semibold">
-              Auto-picked for this device on first launch — adjust if the ride feels choppy.
-              Tablets default to Low so a 1600×2560 panel does not fill millions of pixels.
-            </p>
+        <div>
+          <label className="text-[10px] font-semibold text-hud-muted uppercase tracking-wider flex items-center gap-2 mb-2.5">
+            <Compass className="w-4 h-4 text-hud-accent" /> Touch movement
+          </label>
+          <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => onUpdateSettings({ ...settings, showPerfHud: !settings.showPerfHud })}
-              className={`mt-2 w-full min-h-11 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                settings.showPerfHud
-                  ? 'bg-hud-accent text-hud-accent-fg border-hud-accent'
-                  : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
-              }`}
+              type="button"
+              onClick={() => onUpdateSettings({ ...settings, touchControlMode: 'joystick' })}
+              className={settings.touchControlMode === 'joystick' ? 'hud-chip hud-chip-on' : 'hud-chip'}
             >
-              {settings.showPerfHud ? 'FPS overlay ON' : 'Show FPS overlay'}
+              Analog stick
+              <span className="block text-[11px] font-normal opacity-80 mt-0.5">360° steer and throttle</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdateSettings({ ...settings, touchControlMode: 'dpad' })}
+              className={settings.touchControlMode === 'dpad' ? 'hud-chip hud-chip-on' : 'hud-chip'}
+            >
+              D-pad
+              <span className="block text-[11px] font-normal opacity-80 mt-0.5">Discrete arrows</span>
             </button>
           </div>
-
-          {/* Steering Assistance Level */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <Compass className="w-4 h-4 text-amber-400" /> Steering & Balance Assist
-              </label>
-              <span className="text-xs font-bold text-amber-400">
-                {settings.steeringAssist > 0.6 ? 'High Assist (Easier)' : settings.steeringAssist > 0.2 ? 'Balanced' : 'Arcade Pro'}
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.25"
-              value={settings.steeringAssist}
-              onChange={(e) => onUpdateSettings({ ...settings, steeringAssist: parseFloat(e.target.value) })}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-semibold">
-              <span>Pro Arcade</span>
-              <span>Younger Driver Assist</span>
-            </div>
-          </div>
-
-          {/* Audio Controls */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-purple-400" /> Audio Synthesizer Controls
-            </h4>
-
-            <div className="space-y-2">
-              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700 cursor-pointer">
-                <span className="text-xs font-bold text-white">Dynamic Spy Synth Music Loop</span>
-                <input
-                  type="checkbox"
-                  checked={soundEngine.musicEnabled}
-                  onChange={(e) => {
-                    soundEngine.setMusicEnabled(e.target.checked);
-                    onUpdateSettings({ ...settings });
-                  }}
-                  className="w-4 h-4 accent-cyan-400 cursor-pointer"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700 cursor-pointer">
-                <span className="text-xs font-bold text-white">Voice Guidance (Agent Kira & V9 AI)</span>
-                <input
-                  type="checkbox"
-                  checked={soundEngine.voiceEnabled}
-                  onChange={(e) => {
-                    soundEngine.voiceEnabled = e.target.checked;
-                    onUpdateSettings({ ...settings });
-                  }}
-                  className="w-4 h-4 accent-cyan-400 cursor-pointer"
-                />
-              </label>
-            </div>
-          </div>
-
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex justify-end">
+        <div>
+          <label className="text-[10px] font-semibold text-hud-muted uppercase tracking-wider flex items-center gap-2 mb-2.5">
+            <Gauge className="w-4 h-4 text-hud-accent" /> Graphics
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { level: 'low', label: 'Low', hint: 'Best speed' },
+              { level: 'medium', label: 'Medium', hint: 'Balanced' },
+              { level: 'high', label: 'High', hint: 'Best looks' },
+            ] as const).map((item) => (
+              <button
+                key={item.level}
+                type="button"
+                onClick={() => onUpdateSettings({ ...settings, qualityLevel: item.level })}
+                className={`hud-chip flex flex-col items-center justify-center ${
+                  settings.qualityLevel === item.level ? 'hud-chip-on' : ''
+                }`}
+              >
+                {item.label}
+                <span className="text-[10px] font-normal opacity-80">{item.hint}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-hud-muted mt-2">
+            Auto-picked on first launch. Tablets default to Low so a large panel stays smooth.
+          </p>
           <button
-            onClick={onClose}
-            className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black uppercase tracking-wider transition active:scale-95 cursor-pointer"
+            type="button"
+            onClick={() => onUpdateSettings({ ...settings, showPerfHud: !settings.showPerfHud })}
+            className={`mt-2 w-full hud-chip ${settings.showPerfHud ? 'hud-chip-on' : ''}`}
           >
-            Save & Close
+            {settings.showPerfHud ? 'FPS overlay on' : 'Show FPS overlay'}
           </button>
         </div>
 
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10px] font-semibold text-hud-muted uppercase tracking-wider flex items-center gap-2">
+              <Compass className="w-4 h-4 text-hud-accent" /> Steering assist
+            </label>
+            <span className="text-xs text-hud-fg">
+              {settings.steeringAssist > 0.6 ? 'High' : settings.steeringAssist > 0.2 ? 'Balanced' : 'Arcade'}
+            </span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.25"
+            value={settings.steeringAssist}
+            onChange={(e) => onUpdateSettings({ ...settings, steeringAssist: parseFloat(e.target.value) })}
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-hud-track accent-[var(--color-hud-accent)]"
+          />
+          <div className="flex justify-between text-[10px] text-hud-muted mt-1">
+            <span>Pro</span>
+            <span>Younger driver</span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="text-[10px] font-semibold text-hud-muted uppercase tracking-wider flex items-center gap-2">
+            <Volume2 className="w-4 h-4 text-hud-accent" /> Audio
+          </h4>
+          <label className="hud-chip flex items-center justify-between cursor-pointer">
+            <span>Music</span>
+            <input
+              type="checkbox"
+              checked={soundEngine.musicEnabled}
+              onChange={(e) => {
+                soundEngine.setMusicEnabled(e.target.checked);
+                onUpdateSettings({ ...settings });
+              }}
+              className="w-4 h-4 accent-[var(--color-hud-accent)]"
+            />
+          </label>
+          <label className="hud-chip flex items-center justify-between cursor-pointer">
+            <span>Voice guidance</span>
+            <input
+              type="checkbox"
+              checked={soundEngine.voiceEnabled}
+              onChange={(e) => {
+                soundEngine.voiceEnabled = e.target.checked;
+                onUpdateSettings({ ...settings });
+              }}
+              className="w-4 h-4 accent-[var(--color-hud-accent)]"
+            />
+          </label>
+        </div>
       </div>
-    </div>
+    </HudModal>
   );
 };

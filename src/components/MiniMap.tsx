@@ -488,53 +488,41 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           </div>
         </div>
 
-        {/* Inner Tactical Distance Ring Tag */}
-        <div className="absolute bottom-1 right-2 text-[8px] font-mono font-bold text-cyan-400/70 pointer-events-none">
+        {/* Range tag becomes the zoom cycle control */}
+        <button
+          id="radar-zoom-in-btn"
+          type="button"
+          onClick={() => setZoomLevel((z) => (z + 1) % zoomRanges.length)}
+          className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 hud-btn h-11 px-3 text-[10px] font-medium text-hud-fg"
+          title="Cycle radar range"
+        >
           {Math.round(currentRange)}m
-        </div>
-      </div>
-
-      {/* ---------------- RADAR CONTROLS & STATUS BAR ---------------- */}
-      <div className="flex items-center justify-between w-[132px] mt-2 px-0.5">
-        {/* Mode Toggle: Heading Up vs North Up */}
+        </button>
         <button
           id="radar-heading-btn"
+          type="button"
           onClick={() => setRadarMode((m) => (m === 'heading' ? 'north' : 'heading'))}
-          className="min-h-11 px-2 rounded-[10px] bg-hud-panel border border-hud-line text-[10px] font-medium text-hud-fg flex items-center gap-1"
-          title="Toggle Heading Up / North Up"
+          className="absolute top-1 left-1/2 -translate-x-1/2 z-20 hud-btn h-11 px-3 text-[10px] font-medium text-hud-fg"
+          title="Toggle heading up / north up"
         >
-          <Navigation className={`w-2.5 h-2.5 ${radarMode === 'heading' ? 'text-cyan-300' : 'text-slate-400 rotate-45'}`} />
-          <span>{radarMode === 'heading' ? 'HDG-UP' : 'NORTH'}</span>
+          {radarMode === 'heading' ? 'HDG' : 'N'}
         </button>
-
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-1">
-          <button
-            id="radar-zoom-in-btn"
-            onClick={() => setZoomLevel((z) => Math.max(0, z - 1))}
-            disabled={zoomLevel === 0}
-            className="w-11 h-11 rounded-[10px] bg-hud-panel border border-hud-line text-hud-accent flex items-center justify-center"
-            title="Zoom In (Tactical Range)"
-          >
-            +
-          </button>
-          <button
-            id="radar-zoom-out-btn"
-            onClick={() => setZoomLevel((z) => Math.min(zoomRanges.length - 1, z + 1))}
-            disabled={zoomLevel === zoomRanges.length - 1}
-            className="w-11 h-11 rounded-[10px] bg-hud-panel border border-hud-line text-hud-accent flex items-center justify-center"
-            title="Zoom Out (Regional Range)"
-          >
-            -
-          </button>
-        </div>
+        <button
+          id="radar-zoom-out-btn"
+          type="button"
+          className="sr-only"
+          tabIndex={-1}
+          onClick={() => setZoomLevel((z) => (z + 1) % zoomRanges.length)}
+        >
+          Cycle range
+        </button>
       </div>
 
       {/* GPS Coordinates Readout */}
       <div className="w-[132px] text-[10px] font-mono text-hud-muted flex justify-between px-0.5 mt-1">
         <span>X: {Math.round(activePos.x)}</span>
         <span>Z: {Math.round(activePos.z)}</span>
-        <span className="text-emerald-400">{state.speedMPH} MPH</span>
+        <span className="text-hud-ok">{state.speedMPH} MPH</span>
       </div>
     </div>
   );

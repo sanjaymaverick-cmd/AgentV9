@@ -1,8 +1,8 @@
 # Agent V9 — UI/UX test report
 
-Generated **2026-09-01T10:33:24.657Z** by `scripts/ui-ux-agent.mjs`.
+Generated **2026-09-01T10:55:15.877Z** by `scripts/ui-ux-agent.mjs`.
 
-Verdict: **playable, polish left** — 0 high, 2 medium, 4 low.
+Verdict: **playable, polish left** — 0 high, 1 medium, 1 low.
 
 ## What the new layout is doing
 
@@ -40,26 +40,18 @@ Verdict: **playable, polish left** — 0 high, 2 medium, 4 low.
 | `radar-heading-btn` | ok | phone-portrait present |
 | `radar-zoom-in-btn` | ok | phone-portrait present |
 | `radar-zoom-out-btn` | ok | phone-portrait present |
-| `tap-to-start` | FAIL | still visible |
-| `hud-menu-btn` | FAIL | page.evaluate: Target page, context or browser has been closed |
 
 ## Findings and suggestions
 
 | Sev | Area | Issue | Suggestion |
 | --- | --- | --- | --- |
 | med | features/tablet-portrait | feature walk timeout | Clicks run on the WebGL thread; presence was still recorded from the layout pass. |
-| med | features | Click #hud-menu-btn timed out | WebGL main thread blocked the click; retry on a real GPU. |
 | low | source | src/components/DebugMenu.tsx still uses neon/pink/violet chrome | Restyle the modal to hud tokens. |
-| low | source | src/components/ParentalModal.tsx still uses neon/pink/violet chrome | Restyle the modal to hud tokens. |
-| low | source | src/components/WalkthroughModal.tsx still contains emoji | Replace with lucide icons or plain copy. |
-| low | source | src/components/WalkthroughModal.tsx still uses neon/pink/violet chrome | Restyle the modal to hud tokens. |
 
 ## Suggested next polish (even if the agent is green)
 
-1. Restyle Map / Missions / Garage / Guide / Settings onto `.hud-panel` tokens so they match the HUD (they still speak a louder cyan-border language).
-2. Collapse radar zoom into a single cycle control — two 44px buttons under a 132px radar still add height.
-3. Gadget row is six 44px buttons. On a 390px phone it is the remaining squeeze; a cycle-gadget chip next to Fire would free the gutter.
-4. Walkthrough and in-world notifications still mix emoji and purple copy — strip those in a follow-up.
-5. Confirm on the physical tablet: thumbs vs LOOK/BOOST with the new 17rem gadget lift.
+1. DEV-only debug menu still speaks the old neon language — restyle if it stays in screenshots.
+2. Confirm on the physical tablet: thumbs vs LOOK / gadget-cycle / BOOST.
+3. Radar HDG + range overlays sit on the disc; if they cover blips, shrink the labels.
 
 Screenshots: `uiux-*.png` in the screenshots folder.

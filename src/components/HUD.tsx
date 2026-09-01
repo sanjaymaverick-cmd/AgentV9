@@ -153,6 +153,15 @@ export const HUD: React.FC<HUDProps> = ({
               <Meter label="Nitro" icon={<Flame className="w-3 h-3" />} value={state.nitroLevel} />
             </div>
           </div>
+          <button
+            id="silent-mode-toggle-btn"
+            type="button"
+            onClick={onToggleSilent}
+            className={`hud-btn shrink-0 ${state.isSilentMode ? 'text-hud-ok border-hud-ok/40' : ''}`}
+            title="Silent mode"
+          >
+            {state.isSilentMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         </div>
 
         <button
@@ -396,34 +405,41 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
         )}
 
-        <div data-hud="gadgets" className="hud-panel flex items-center gap-2 p-2">
-          <button
-            id="silent-mode-toggle-btn"
-            type="button"
-            onClick={onToggleSilent}
-            className={`hud-btn ${state.isSilentMode ? 'text-hud-ok border-hud-ok/40' : ''}`}
-            title="Silent mode"
-          >
-            {state.isSilentMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-          {GADGETS.map((g) => {
-            const selected = state.currentGadget === g.id;
-            const Icon = g.icon;
-            return (
+        {!touchControlsActive && (
+          <div data-hud="gadgets" className="hud-panel flex items-center gap-2 p-2">
+            {GADGETS.map((g) => {
+              const selected = state.currentGadget === g.id;
+              const Icon = g.icon;
+              return (
+                <button
+                  key={g.id}
+                  id={`gadget-btn-${g.id}`}
+                  type="button"
+                  onClick={() => onSelectGadget(g.id)}
+                  className={`hud-btn flex-col gap-0.5 w-11 h-11 ${selected ? 'border-hud-accent text-hud-accent' : 'text-hud-muted'}`}
+                  title={`${g.label} (${g.key})`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-[9px] font-medium hidden sm:block">{g.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {touchControlsActive && (
+          <div className="hidden">
+            {GADGETS.map((g) => (
               <button
                 key={g.id}
                 id={`gadget-btn-${g.id}`}
                 type="button"
                 onClick={() => onSelectGadget(g.id)}
-                className={`hud-btn flex-col gap-0.5 w-11 h-11 ${selected ? 'border-hud-accent text-hud-accent' : 'text-hud-muted'}`}
-                title={`${g.label} (${g.key})`}
               >
-                <Icon className="w-4 h-4" />
-                <span className="text-[9px] font-medium hidden sm:block">{g.label}</span>
+                {g.label}
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

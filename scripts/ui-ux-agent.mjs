@@ -384,11 +384,9 @@ function writeReport() {
   md.push('');
   md.push('## Suggested next polish (even if the agent is green)');
   md.push('');
-  md.push('1. Restyle Map / Missions / Garage / Guide / Settings onto `.hud-panel` tokens so they match the HUD (they still speak a louder cyan-border language).');
-  md.push('2. Collapse radar zoom into a single cycle control — two 44px buttons under a 132px radar still add height.');
-  md.push('3. Gadget row is six 44px buttons. On a 390px phone it is the remaining squeeze; a cycle-gadget chip next to Fire would free the gutter.');
-  md.push('4. Walkthrough and in-world notifications still mix emoji and purple copy — strip those in a follow-up.');
-  md.push('5. Confirm on the physical tablet: thumbs vs LOOK/BOOST with the new 17rem gadget lift.');
+  md.push('1. DEV-only debug menu still speaks the old neon language — restyle if it stays in screenshots.');
+  md.push('2. Confirm on the physical tablet: thumbs vs LOOK / gadget-cycle / BOOST.');
+  md.push('3. Radar HDG + range overlays sit on the disc; if they cover blips, shrink the labels.');
   md.push('');
   md.push('Screenshots: `uiux-*.png` in the screenshots folder.');
   md.push('');

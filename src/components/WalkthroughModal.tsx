@@ -5,20 +5,19 @@ import {
   Zap, 
   EyeOff, 
   Cpu, 
-  ShieldAlert, 
   Gamepad2, 
   Sparkles, 
   Award, 
   MapPin, 
   Radio, 
   CheckCircle2, 
-  X, 
   Flame, 
-  Fuel, 
+  Fuel,
+  ShieldAlert,
   Layers, 
-  ChevronRight,
   ArrowUpRight
 } from 'lucide-react';
+import { HudModal } from './HudModal';
 
 interface WalkthroughModalProps {
   isOpen: boolean;
@@ -36,65 +35,45 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div 
-        id="v9-walkthrough-modal"
-        className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900/95 border border-cyan-500/40 rounded-2xl shadow-2xl shadow-cyan-950/60 overflow-hidden text-slate-100 font-sans"
-      >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-cyan-500/20 bg-slate-950/70">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/60 flex items-center justify-center text-cyan-300 shadow-inner">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-amber-300">
-                VELOCITY CITY FIELD MANUAL & WALKTHROUGH
-              </h2>
-              <p className="text-xs text-slate-400 font-mono">
-                Project V9 // Official Operational Guide & Tactics
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="hud-modal-close"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 px-6 py-2.5 bg-slate-950/40 border-b border-slate-800 overflow-x-auto text-xs font-mono">
+    <HudModal
+      id="v9-walkthrough-modal"
+      title="Field manual"
+      subtitle="Story, approaches, districts, and controls"
+      icon={BookOpen}
+      onClose={onClose}
+      wide
+      footer={
+        <button type="button" onClick={onClose} className="hud-primary">
+          Return to mission
+        </button>
+      }
+    >
+        <div className="flex items-center gap-2 mb-5 overflow-x-auto">
           {[
-            { id: 'overview', label: 'Premise & Lore', icon: Radio },
-            { id: 'approaches', label: '3-Way Playstyles', icon: Layers },
-            { id: 'walkthrough', label: 'Story Walkthrough', icon: CheckCircle2 },
-            { id: 'city', label: 'City Districts & GPS', icon: Compass },
-            { id: 'controls', label: 'Controls & Moves', icon: Gamepad2 },
-            { id: 'upgrades', label: 'Vehicle & Gadgets', icon: Zap },
+            { id: 'overview', label: 'Premise', icon: Radio },
+            { id: 'approaches', label: 'Playstyles', icon: Layers },
+            { id: 'walkthrough', label: 'Story', icon: CheckCircle2 },
+            { id: 'city', label: 'Districts', icon: Compass },
+            { id: 'controls', label: 'Controls', icon: Gamepad2 },
+            { id: 'upgrades', label: 'Gadgets', icon: Zap },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-bold transition whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'bg-cyan-500/20 border border-cyan-400/60 text-cyan-300 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                }`}
+                type="button"
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`hud-chip inline-flex items-center gap-1.5 whitespace-nowrap ${isActive ? 'hud-chip-on' : ''}`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
+                {tab.label}
               </button>
             );
           })}
         </div>
 
-        {/* Modal Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm text-slate-300 leading-relaxed">
+        <div className="space-y-6 text-sm text-hud-fg leading-relaxed">
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-fadeIn">
@@ -133,7 +112,7 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
-                  <div className="flex items-center gap-2 text-pink-300 font-bold font-mono">
+                  <div className="flex items-center gap-2 text-hud-accent font-semibold">
                     <Compass className="w-4 h-4" />
                     <span>Active GPS</span>
                   </div>
@@ -154,50 +133,48 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* 1. SPEED */}
-                <div className="p-5 rounded-2xl bg-gradient-to-b from-amber-500/10 to-slate-950 border border-amber-500/30 flex flex-col space-y-3">
-                  <div className="flex items-center gap-2 text-amber-300 font-black text-base">
-                    <Flame className="w-5 h-5 text-amber-400" />
-                    <span>THE SPEED PATH</span>
+                <div className="hud-panel p-5 flex flex-col space-y-3">
+                  <div className="flex items-center gap-2 text-hud-fg font-semibold text-base">
+                    <Flame className="w-5 h-5 text-hud-accent" />
+                    <span>Speed</span>
                   </div>
                   <p className="text-xs text-slate-300">
                     High octane racing, precision drifting, and acrobatic rooftop ramps.
                   </p>
                   <ul className="text-xs space-y-2 text-slate-400 list-disc list-inside flex-1">
                     <li>Launch over perimeter fences using yellow rooftop ramps.</li>
-                    <li>Drift around tight cyber city corners with <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300 font-mono">Shift</kbd>.</li>
+                    <li>Drift around tight cyber city corners with <kbd className="px-1.5 py-0.5 bg-hud-track rounded text-hud-accent font-mono">Shift</kbd>.</li>
                     <li>Hit aerial Stunt Rings across the monorail for mega XP and speed refills.</li>
-                    <li>Trigger Super Jump (<kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-amber-300 font-mono">Space</kbd>) over traffic barriers.</li>
+                    <li>Trigger Super Jump (<kbd className="px-1.5 py-0.5 bg-hud-track rounded text-hud-accent font-mono">Space</kbd>) over traffic barriers.</li>
                   </ul>
-                  <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-300 text-[11px] font-mono border border-amber-500/20">
+                  <div className="p-2.5 rounded-[10px] bg-hud-track text-hud-muted text-[11px] border border-hud-line">
                     Best for: Thrill-seekers & high-speed vehicle mastery
                   </div>
                 </div>
 
-                {/* 2. STEALTH */}
-                <div className="p-5 rounded-2xl bg-gradient-to-b from-purple-500/10 to-slate-950 border border-purple-500/30 flex flex-col space-y-3">
-                  <div className="flex items-center gap-2 text-purple-300 font-black text-base">
-                    <EyeOff className="w-5 h-5 text-purple-400" />
-                    <span>THE STEALTH PATH</span>
+                <div className="hud-panel p-5 flex flex-col space-y-3">
+                  <div className="flex items-center gap-2 text-hud-fg font-semibold text-base">
+                    <EyeOff className="w-5 h-5 text-hud-accent" />
+                    <span>Stealth</span>
                   </div>
                   <p className="text-xs text-slate-300">
                     Infiltration, disguises, silent electric drives, and shadow stalking.
                   </p>
                   <ul className="text-xs space-y-2 text-slate-400 list-disc list-inside flex-1">
-                    <li>Toggle <strong>Silent Electric Mode</strong> (<kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-purple-300 font-mono">C</kbd>) on your bike to reduce noise.</li>
+                    <li>Toggle <strong>Silent Electric Mode</strong> (<kbd className="px-1.5 py-0.5 bg-hud-track rounded text-hud-accent font-mono">C</kbd>) on your bike to reduce noise.</li>
                     <li>Equip disguises at Lockers (Maintenance Tech, Lab Scientist, Delivery).</li>
                     <li>Disguises prevent guard bot detection inside restricted facilities.</li>
                     <li>Crouch on foot to sneak past security lasers and surveillance cameras.</li>
                   </ul>
-                  <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-300 text-[11px] font-mono border border-purple-500/20">
+                  <div className="p-2.5 rounded-[10px] bg-hud-track text-hud-muted text-[11px] border border-hud-line">
                     Best for: Tactical planners & silent ghost operatives
                   </div>
                 </div>
 
-                {/* 3. SMARTS */}
-                <div className="p-5 rounded-2xl bg-gradient-to-b from-cyan-500/10 to-slate-950 border border-cyan-500/30 flex flex-col space-y-3">
-                  <div className="flex items-center gap-2 text-cyan-300 font-black text-base">
-                    <Cpu className="w-5 h-5 text-cyan-400" />
-                    <span>THE SMARTS PATH</span>
+                <div className="hud-panel p-5 flex flex-col space-y-3">
+                  <div className="flex items-center gap-2 text-hud-fg font-semibold text-base">
+                    <Cpu className="w-5 h-5 text-hud-accent" />
+                    <span>Smarts</span>
                   </div>
                   <p className="text-xs text-slate-300">
                     Drone surveillance, EMP disruptors, foam launchers, and terminal hacking.
@@ -299,15 +276,15 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-2 border-t border-slate-800/80 text-[11px]">
                       <div className="p-2 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                        <strong className="text-amber-300">⚡ Speed: </strong>
+                        <strong className="text-hud-fg">Speed: </strong>
                         <span className="text-slate-300">{item.hints.speed}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/20">
-                        <strong className="text-purple-300">👁️ Stealth: </strong>
+                      <div className="p-2 rounded-[10px] border border-hud-line">
+                        <strong className="text-hud-fg">Stealth: </strong>
                         <span className="text-slate-300">{item.hints.stealth}</span>
                       </div>
                       <div className="p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
-                        <strong className="text-cyan-300">💻 Smarts: </strong>
+                        <strong className="text-hud-fg">Smarts: </strong>
                         <span className="text-slate-300">{item.hints.smarts}</span>
                       </div>
                     </div>
@@ -435,15 +412,15 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
                   </h4>
                   <div className="space-y-3 text-xs text-slate-300">
                     <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
-                      <strong className="text-amber-300 font-mono block mb-1">⚡ Kinetic Nitro Drift</strong>
+                      <strong className="text-hud-fg font-mono block mb-1">Kinetic nitro drift</strong>
                       Drifting around corners with <kbd className="px-1 bg-slate-800 rounded text-cyan-300 font-mono">Shift</kbd> + steering generates kinetic nitro energy. The longer your drift arc, the higher your score multiplier!
                     </div>
                     <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
-                      <strong className="text-emerald-300 font-mono block mb-1">🚀 Super Ramp Boost</strong>
+                      <strong className="text-hud-fg font-mono block mb-1">Super ramp boost</strong>
                       Hit yellow rooftop ramps at 40+ MPH with Nitro active to launch across building gaps and clear laser perimeters.
                     </div>
                     <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
-                      <strong className="text-purple-300 font-mono block mb-1">🛡️ Shadow Disguise Bypass</strong>
+                      <strong className="text-hud-fg font-mono block mb-1">Shadow disguise bypass</strong>
                       When wearing a matching disguise (e.g. Lab Scientist in Museum), guard bot detection cones turn yellow and will ignore you!
                     </div>
                   </div>
@@ -490,8 +467,8 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-pink-950/30 border border-pink-500/20 space-y-1">
-                    <div className="flex items-center gap-2 font-bold text-pink-300 font-mono">
+                  <div className="p-3 rounded-[10px] border border-hud-line space-y-1">
+                    <div className="flex items-center gap-2 font-semibold text-hud-fg">
                       <Sparkles className="w-4 h-4" />
                       <span>Holographic Decoy (4)</span>
                     </div>
@@ -504,20 +481,6 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
             </div>
           )}
         </div>
-
-        {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-800 bg-slate-950/80 text-xs font-mono">
-          <span className="text-slate-500">
-            Agent V9 Operations System v2.4 // Velocity City
-          </span>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black tracking-wide shadow-lg shadow-cyan-500/25 transition active:scale-95 cursor-pointer"
-          >
-            RETURN TO MISSION
-          </button>
-        </div>
-      </div>
-    </div>
+    </HudModal>
   );
 };

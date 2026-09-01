@@ -139,7 +139,7 @@ export class PlayerActions {
           e.state.fuelLevel = Math.min(100, e.state.fuelLevel + 25);
           soundEngine.playRefuelHum(e.state.fuelLevel);
           e.worldSystems.spawnRefuelParticle(st.position, e.bikePos);
-          e.setNotification('⚡ Plasma Refuel Charged +25%');
+          e.setNotification('Plasma refuel charged +25%');
           e.notifyState();
           return;
         }

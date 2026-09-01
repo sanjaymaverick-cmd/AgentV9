@@ -145,3 +145,101 @@
     transition: none;
   }
 }
+
+.hud-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgb(7 10 16 / 0.78);
+  backdrop-filter: blur(8px);
+}
+.hud-modal {
+  width: 100%;
+  max-width: 42rem;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-hud-bg);
+  color: var(--color-hud-fg);
+  border: 1px solid var(--color-hud-line);
+  border-radius: 24px;
+}
+.hud-modal-wide {
+  max-width: 56rem;
+}
+.hud-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-hud-line);
+}
+.hud-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-hud-sm);
+  border: 1px solid var(--color-hud-line);
+  background: color-mix(in oklab, var(--color-hud-accent) 14%, transparent);
+  color: var(--color-hud-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hud-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.hud-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-hud-line);
+}
+.hud-chip {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-hud-sm);
+  border: 1px solid var(--color-hud-line);
+  background: rgb(12 16 22 / 0.55);
+  color: var(--color-hud-fg);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+}
+.hud-chip-on {
+  background: var(--color-hud-accent);
+  color: var(--color-hud-accent-fg);
+  border-color: var(--color-hud-accent);
+}
+.hud-primary {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-hud-sm);
+  background: var(--color-hud-accent);
+  color: var(--color-hud-accent-fg);
+  font-weight: 600;
+  font-size: 13px;
+}
+.hud-input {
+  min-height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  border-radius: var(--radius-hud-sm);
+  border: 1px solid var(--color-hud-line);
+  background: rgb(12 16 22 / 0.7);
+  color: var(--color-hud-fg);
+  font-size: 13px;
+}
+.hud-input::placeholder {
+  color: var(--color-hud-muted);
+}
