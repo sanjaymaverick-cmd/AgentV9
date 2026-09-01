@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Check, Palette, Shirt, Zap, Shield, Wrench } from 'lucide-react';
+import { X, Sparkles, Check, Palette, Shirt, Zap, Shield, Wrench, Package, FlaskConical, Flag } from 'lucide-react';
 import { VehicleCustomization, DisguiseType, PlayerStats } from '../types/game';
 import { soundEngine } from '../game/audio';
 
@@ -31,12 +31,12 @@ const UNDERGLOW_COLORS = [
   { name: 'Ghost White', value: '#ffffff' },
 ];
 
-const DISGUISES: { id: DisguiseType; name: string; desc: string; icon: string }[] = [
-  { id: 'agent_suit', name: 'V9 Academy Stealth Suit', desc: 'Standard high-tech tactical jumpsuit with night visor.', icon: '🕵️' },
-  { id: 'delivery_worker', name: 'Velocity Courier Outfit', desc: 'Blends in near food stalls, transit hubs, and cargo docks.', icon: '📦' },
-  { id: 'maintenance_tech', name: 'Technician Safety Uniform', desc: 'Allows authorized entry into vents, electrical hubs, and museum docks.', icon: '👷' },
-  { id: 'lab_scientist', name: 'Research Lab Coat', desc: 'Access high-tech laboratory rooms and prototype test areas.', icon: '🥼' },
-  { id: 'race_crew', name: 'Grand Prix Race Crew', desc: 'Free access around speedways and cargo rail terminals.', icon: '🏎️' },
+const DISGUISES: { id: DisguiseType; name: string; desc: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'agent_suit', name: 'V9 Academy Stealth Suit', desc: 'Standard high-tech tactical jumpsuit with night visor.', icon: Shield },
+  { id: 'delivery_worker', name: 'Velocity Courier Outfit', desc: 'Blends in near food stalls, transit hubs, and cargo docks.', icon: Package },
+  { id: 'maintenance_tech', name: 'Technician Safety Uniform', desc: 'Allows authorized entry into vents, electrical hubs, and museum docks.', icon: Wrench },
+  { id: 'lab_scientist', name: 'Research Lab Coat', desc: 'Access high-tech laboratory rooms and prototype test areas.', icon: FlaskConical },
+  { id: 'race_crew', name: 'Grand Prix Race Crew', desc: 'Free access around speedways and cargo rail terminals.', icon: Flag },
 ];
 
 export const CustomizerModal: React.FC<CustomizerModalProps> = ({
@@ -72,7 +72,7 @@ export const CustomizerModal: React.FC<CustomizerModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+            className="hud-modal-close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -220,7 +220,7 @@ export const CustomizerModal: React.FC<CustomizerModalProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
-                      <span className="text-3xl">{d.icon}</span>
+                      <d.icon className="w-6 h-6 text-hud-accent shrink-0" />
                       <div>
                         <h4 className="text-sm font-black text-white">{d.name}</h4>
                         <p className="text-xs text-slate-400 mt-0.5">{d.desc}</p>
@@ -233,7 +233,7 @@ export const CustomizerModal: React.FC<CustomizerModalProps> = ({
                     ) : isUnlocked ? (
                       <span className="text-xs font-bold text-cyan-400 hover:underline">Select</span>
                     ) : (
-                      <span className="text-xs font-bold text-slate-500">🔒 Unlock in City</span>
+                      <span className="text-xs font-bold text-slate-500">Unlock in City</span>
                     )}
                   </div>
                 );

@@ -80,7 +80,7 @@ export const MapExplorerModal: React.FC<MapExplorerModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer"
+            className="hud-modal-close"
           >
             <X className="w-6 h-6" />
           </button>

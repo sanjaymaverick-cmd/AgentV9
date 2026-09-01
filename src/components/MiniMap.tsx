@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { GameState } from '../game/gameEngine';
-import { RadarEntity } from '../types/game';
-import { Compass, ZoomIn, ZoomOut, Navigation, Radio, ShieldAlert, Zap, Cpu, Car, MapPin, User, Fuel, Flag } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 
 interface Vec3 {
   x: number;
@@ -39,7 +38,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   const currentRange = baseRange + speedRatio * 40;
 
   // Radar dimensions in CSS pixels
-  const radarSize = 176; // px diameter
+  const radarSize = 132; // px diameter
   const radiusPx = radarSize / 2;
 
   // Active tracked origin (Drone when active, Bike when riding, Player when on foot)
@@ -177,10 +176,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       {/* ---------------- MAIN CIRCULAR RADAR HUD ---------------- */}
       <div 
         id="v9-tactical-radar"
-        className="relative w-[176px] h-[176px] rounded-full border-2 border-cyan-400/80 bg-slate-950/95 backdrop-blur-md overflow-hidden shadow-2xl transition-all"
-        style={{
-          boxShadow: '0 0 24px rgba(6, 182, 212, 0.3), inset 0 0 20px rgba(15, 23, 42, 0.95)',
-        }}
+        className="relative w-[132px] h-[132px] rounded-full border border-hud-line bg-hud-bg/90 overflow-hidden"
       >
         {/* Road Grid Overlay */}
         {renderRoadGridSVG()}
@@ -259,8 +255,8 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               >
                 <div className={`relative flex items-center justify-center ${isOffRadar ? 'animate-pulse' : ''}`}>
                   <div className="w-4.5 h-4.5 rounded-full bg-amber-400/30 border border-amber-300 animate-ping absolute" />
-                  <div className="w-3.5 h-3.5 rounded-full bg-amber-400 border border-amber-950 flex items-center justify-center text-[8px] font-black text-black shadow-md shadow-amber-500/50">
-                    ★
+                  <div className="w-3.5 h-3.5 rounded-full bg-hud-warn border border-hud-bg flex items-center justify-center text-[8px] font-semibold text-hud-accent-fg">
+                    !
                   </div>
                   {isOffRadar && (
                     <div className="absolute -top-3.5 whitespace-nowrap text-[7px] font-black bg-slate-900/90 text-amber-300 px-1 rounded border border-amber-500/50">
@@ -299,8 +295,8 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 style={{ left: screenX, top: screenY }}
                 title={entity.label}
               >
-                <div className="w-3 h-3 rounded-full bg-emerald-500 border border-white flex items-center justify-center text-[7px] font-black text-slate-950 shadow-sm shadow-emerald-500/50">
-                  ⚡
+                <div className="w-3 h-3 rounded-full bg-hud-ok border border-hud-fg flex items-center justify-center text-[7px] font-semibold text-hud-accent-fg">
+                  F
                 </div>
               </div>
             );
@@ -314,7 +310,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             const isStunt = entity.category === 'stunt';
 
             const bgClass = isGas ? 'bg-emerald-500' : isStory ? 'bg-amber-400' : isSide ? 'bg-pink-500' : isStunt ? 'bg-purple-500' : 'bg-sky-400';
-            const char = isGas ? '⚡' : isStory ? '★' : isSide ? '🚩' : isStunt ? '⚡' : '📍';
+            const char = isGas ? 'F' : isStory ? 'S' : isSide ? 'Q' : isStunt ? 'J' : 'P';
 
             return (
               <div
@@ -499,11 +495,12 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       </div>
 
       {/* ---------------- RADAR CONTROLS & STATUS BAR ---------------- */}
-      <div className="flex items-center justify-between w-[176px] mt-1.5 px-1">
+      <div className="flex items-center justify-between w-[132px] mt-2 px-0.5">
         {/* Mode Toggle: Heading Up vs North Up */}
         <button
+          id="radar-heading-btn"
           onClick={() => setRadarMode((m) => (m === 'heading' ? 'north' : 'heading'))}
-          className="px-2 py-0.5 rounded-md bg-slate-900/90 hover:bg-cyan-950/80 border border-cyan-500/40 text-[9px] font-mono font-bold text-cyan-300 flex items-center gap-1 shadow-md transition active:scale-95 cursor-pointer"
+          className="min-h-11 px-2 rounded-[10px] bg-hud-panel border border-hud-line text-[10px] font-medium text-hud-fg flex items-center gap-1"
           title="Toggle Heading Up / North Up"
         >
           <Navigation className={`w-2.5 h-2.5 ${radarMode === 'heading' ? 'text-cyan-300' : 'text-slate-400 rotate-45'}`} />
@@ -513,17 +510,19 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         {/* Zoom Controls */}
         <div className="flex items-center gap-1">
           <button
+            id="radar-zoom-in-btn"
             onClick={() => setZoomLevel((z) => Math.max(0, z - 1))}
             disabled={zoomLevel === 0}
-            className="w-5 h-5 rounded-md bg-slate-900/90 hover:bg-cyan-950/80 disabled:opacity-30 border border-cyan-500/40 text-cyan-300 flex items-center justify-center text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer"
+            className="w-11 h-11 rounded-[10px] bg-hud-panel border border-hud-line text-hud-accent flex items-center justify-center"
             title="Zoom In (Tactical Range)"
           >
             +
           </button>
           <button
+            id="radar-zoom-out-btn"
             onClick={() => setZoomLevel((z) => Math.min(zoomRanges.length - 1, z + 1))}
             disabled={zoomLevel === zoomRanges.length - 1}
-            className="w-5 h-5 rounded-md bg-slate-900/90 hover:bg-cyan-950/80 disabled:opacity-30 border border-cyan-500/40 text-cyan-300 flex items-center justify-center text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer"
+            className="w-11 h-11 rounded-[10px] bg-hud-panel border border-hud-line text-hud-accent flex items-center justify-center"
             title="Zoom Out (Regional Range)"
           >
             -
@@ -532,7 +531,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       </div>
 
       {/* GPS Coordinates Readout */}
-      <div className="w-[176px] text-[8px] font-mono text-cyan-400/80 flex justify-between px-1 mt-0.5">
+      <div className="w-[132px] text-[10px] font-mono text-hud-muted flex justify-between px-0.5 mt-1">
         <span>X: {Math.round(activePos.x)}</span>
         <span>Z: {Math.round(activePos.z)}</span>
         <span className="text-emerald-400">{state.speedMPH} MPH</span>

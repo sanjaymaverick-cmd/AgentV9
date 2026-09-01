@@ -30,7 +30,7 @@ export const MissionsModal: React.FC<MissionsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+            className="hud-modal-close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -45,7 +45,7 @@ export const MissionsModal: React.FC<MissionsModalProps> = ({
               <span className="text-xs font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full uppercase">
                 Primary Operation
               </span>
-              <span className="text-xs text-slate-400 font-bold">Reward: +{activeMission.rewardXP} XP & 💎 {activeMission.rewardCredits}</span>
+              <span className="text-xs text-slate-400 font-bold">Reward: +{activeMission.rewardXP} XP & {activeMission.rewardCredits} cr</span>
             </div>
 
             <h3 className="text-xl font-black text-white mb-1.5">{activeMission.title}</h3>

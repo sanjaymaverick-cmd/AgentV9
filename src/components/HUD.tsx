@@ -1,33 +1,33 @@
-import React from 'react';
-import { 
-  Shield, 
-  Zap, 
-  Eye, 
-  EyeOff, 
-  Radio, 
-  Gauge, 
-  Sparkles, 
-  Crosshair, 
-  Wrench, 
-  Flame, 
-  Volume2, 
-  Settings, 
-  Compass, 
-  Award, 
-  CheckCircle2, 
+import React, { useEffect, useState } from 'react';
+import {
+  Shield,
+  Zap,
+  Eye,
+  EyeOff,
+  Radio,
+  Gauge,
+  Sparkles,
+  Crosshair,
+  Wrench,
+  Flame,
+  Volume2,
+  Settings,
+  Compass,
   AlertTriangle,
   Timer,
   Navigation,
-  Activity,
   Fuel,
   BatteryCharging,
   BatteryWarning,
-  ZapOff,
   BookOpen,
   MapPin,
   MessageSquare,
   X,
-  CornerUpRight
+  CornerUpRight,
+  Camera,
+  RotateCcw,
+  Menu,
+  Move,
 } from 'lucide-react';
 import type { GameState } from '../game/gameEngine';
 import { soundEngine } from '../game/audio';
@@ -54,10 +54,20 @@ interface HUDProps {
   onSelectGadget: (g: GameState['currentGadget']) => void;
   onToggleSilent: () => void;
   onInteract: () => void;
-  /** When the on-screen touch controls are shown, their top bar (CAM / RESET) sits
-   *  in the top-left — nudge the profile column down so it doesn't clip "AGENT V-09". */
+  onCycleCamera?: () => void;
+  onResetVehicle?: () => void;
+  onToggleTouchMode?: () => void;
+  touchControlMode?: 'joystick' | 'dpad';
   touchControlsActive?: boolean;
 }
+
+const GADGETS = [
+  { id: 'emp', label: 'EMP', key: '1', icon: Zap },
+  { id: 'foam', label: 'Foam', key: '2', icon: Shield },
+  { id: 'drone', label: 'Drone', key: '3', icon: Crosshair },
+  { id: 'hologram', label: 'Holo', key: '4', icon: Sparkles },
+  { id: 'remote_v9', label: 'Remote', key: '5', icon: Gauge },
+] as const;
 
 export const HUD: React.FC<HUDProps> = ({
   state,
@@ -73,600 +83,428 @@ export const HUD: React.FC<HUDProps> = ({
   onSelectGadget,
   onToggleSilent,
   onInteract,
+  onCycleCamera,
+  onResetVehicle,
+  onToggleTouchMode,
+  touchControlMode = 'joystick',
   touchControlsActive = false,
 }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
   const currentStep = state.activeMission.steps[state.activeMission.currentStepIndex];
   const targetPos = currentStep?.targetPosition;
+  const nearBike =
+    !state.isRiding &&
+    Math.hypot(playerPos.x - bikePos.x, playerPos.y - bikePos.y, playerPos.z - bikePos.z) < 4.5 &&
+    state.nearInteraction !== 'refuel' &&
+    state.nearInteraction !== 'talk';
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('#hud-menu-btn, #hud-menu-panel')) return;
+      setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('pointerdown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
+  const closeMenu = () => setMenuOpen(false);
+  const run = (fn?: () => void) => {
+    fn?.();
+    closeMenu();
+  };
+
+  const showHudPrompts = !touchControlsActive;
 
   return (
-    <div className="absolute inset-0 pointer-events-none select-none flex flex-col justify-between p-3 sm:p-5 font-sans">
-      
-      {/* ---------------- TOP BAR ---------------- */}
-      <div className="flex items-start justify-between gap-3 w-full">
-        {/* Left Column: Agent Profile & Rank + Mission Objectives / Radio */}
-        <div className={`pointer-events-auto flex flex-col gap-2.5 max-w-xs sm:max-w-sm ${touchControlsActive ? 'mt-11 sm:mt-12' : ''}`}>
-          {/* Agent Profile & Rank */}
-          <div className="flex items-center gap-3 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-2.5 px-3.5 shadow-xl shadow-cyan-950/40">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/30 border border-cyan-300/40 shrink-0">
-              <Shield className="w-5 h-5 text-cyan-100" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-black uppercase tracking-wider text-cyan-400">Agent V-09</span>
-                <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                  {state.stats.rank}
-                </span>
-              </div>
-              {/* XP Bar */}
-              <div className="w-full h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden border border-slate-700">
-                <div 
-                  className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(100, (state.stats.xp % 500) / 5)}%` }}
-                />
-              </div>
-              <div className="flex justify-between items-center text-[9px] text-slate-400 font-semibold mt-0.5">
-                <span>XP: {state.stats.xp}</span>
-                <span>💎 {state.stats.credits}</span>
-              </div>
-            </div>
+    <div className="hud-safe absolute inset-0 pointer-events-none select-none font-sans text-hud-fg">
+      <div
+        className="absolute top-0 left-0 pointer-events-auto flex flex-col gap-3 max-w-[min(20rem,min(40vw,calc(100vw-9.5rem)))]"
+      >
+        <div data-hud="identity" className="hud-panel flex items-center gap-3 px-3 py-2">
+          <div className="w-11 h-11 rounded-[10px] bg-hud-accent/15 border border-hud-line flex items-center justify-center shrink-0">
+            <Shield className="w-5 h-5 text-hud-accent" />
           </div>
-
-          {/* Mission Objective Card (Positioned in upper-left to keep bottom-left clear for touch joystick) */}
-          <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-500/40 rounded-2xl p-3 shadow-xl shadow-cyan-950/40">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <h4 className="text-[11px] font-black text-white uppercase tracking-wider">
-                  {state.activeMission.title} ({Math.min(state.activeMission.currentStepIndex + 1, state.activeMission.steps.length)}/{state.activeMission.steps.length})
-                </h4>
-              </div>
-              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
-                {state.activeMission.category === 'story' ? 'Active Story' : 'Side Mission'}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold tracking-wide text-hud-accent">Agent V-09</span>
+              <span className="text-[10px] font-semibold text-hud-muted border border-hud-line rounded-full px-2 py-0.5">
+                {state.stats.rank}
               </span>
             </div>
-
-            <p className="text-[11px] text-cyan-200 font-semibold leading-snug">
-              {currentStep ? currentStep.instruction : 'All mission objectives completed!'}
-            </p>
-
-            {/* Approach Hints (Speed / Stealth / Smarts) */}
-            {currentStep && (
-              <div className="mt-2 pt-1.5 border-t border-slate-800/80 flex flex-col gap-1 text-[9px]">
-                <div className="flex items-center gap-1.5 text-orange-300 font-bold">
-                  <Flame className="w-3 h-3 text-orange-400 shrink-0" />
-                  <span className="truncate">SPEED: {currentStep.approachHint.speed}</span>
-                </div>
-                {currentStep.approachHint.stealth !== 'N/A' && (
-                <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
-                  <EyeOff className="w-3 h-3 text-emerald-400 shrink-0" />
-                  <span className="truncate">STEALTH: {currentStep.approachHint.stealth}</span>
-                </div>
-                )}
-                <div className="flex items-center gap-1.5 text-cyan-300 font-bold">
-                  <Sparkles className="w-3 h-3 text-cyan-400 shrink-0" />
-                  <span className="truncate">SMARTS: {currentStep.approachHint.smarts}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Radio Transmission */}
-          {state.radioMessage && (
-            <div className="bg-slate-950/90 border border-blue-500/40 rounded-xl p-2.5 flex items-start gap-2 shadow-lg animate-in fade-in slide-in-from-left duration-200">
-              <div className="w-7 h-7 rounded-lg bg-blue-600/30 border border-blue-400/50 flex items-center justify-center shrink-0">
-                <Radio className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-cyan-400">{state.radioMessage.sender}</span>
-                  <button 
-                    onClick={() => soundEngine.speak(state.radioMessage!.text, 'kira')}
-                    className="text-[9px] text-slate-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Volume2 className="w-2.5 h-2.5" /> Replay
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-200 mt-0.5 font-medium leading-tight line-clamp-3">
-                  "{state.radioMessage.text}"
-                </p>
-              </div>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className="text-xl font-semibold font-mono tabular-nums text-hud-accent leading-none">
+                {state.speedMPH}
+              </span>
+              <span className="text-[10px] font-semibold uppercase text-hud-muted">mph</span>
+              <span className="ml-auto text-[10px] font-medium text-hud-muted tabular-nums">{state.stats.credits} cr</span>
             </div>
-          )}
+            <div className="mt-1.5 flex flex-col gap-1">
+              <Meter label="Energy" icon={<Fuel className="w-3 h-3" />} value={state.fuelLevel} hot={state.fuelLevel <= 20} />
+              <Meter label="Nitro" icon={<Flame className="w-3 h-3" />} value={state.nitroLevel} />
+            </div>
+          </div>
         </div>
 
-        {/* Center: GPS Navigation Banner & Objective Compass */}
-        <div className="flex flex-col items-center gap-2 max-w-lg">
-          {/* Active Turn-by-Turn GPS Navigation Banner */}
-          {state.activeGPSRoute && (
-            <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-md border-2 border-cyan-400/80 rounded-2xl px-4 py-2 flex items-center gap-3 shadow-2xl shadow-cyan-950/80 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-300 shrink-0">
-                <CornerUpRight className="w-5 h-5 text-cyan-400" />
+        <button
+          type="button"
+          data-hud="brief"
+          onClick={() => setBriefOpen((v) => !v)}
+          className="hud-panel text-left px-3 py-2.5 w-full"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-hud-accent">
+              {state.activeMission.title}
+            </span>
+            <span className="text-[10px] tabular-nums text-hud-muted">
+              {Math.min(state.activeMission.currentStepIndex + 1, state.activeMission.steps.length)}/
+              {state.activeMission.steps.length}
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-snug text-hud-fg line-clamp-2">
+            {currentStep ? currentStep.instruction : 'All objectives complete'}
+          </p>
+          {briefOpen && currentStep && (
+            <div className="mt-2 pt-2 border-t border-hud-line flex flex-col gap-1 text-[11px] text-hud-muted">
+              <span>Speed — {currentStep.approachHint.speed}</span>
+              {currentStep.approachHint.stealth !== 'N/A' && (
+                <span>Stealth — {currentStep.approachHint.stealth}</span>
+              )}
+              <span>Smarts — {currentStep.approachHint.smarts}</span>
+            </div>
+          )}
+        </button>
+
+        {state.radioMessage && (
+          <div className="hud-panel px-3 py-2.5 flex items-start gap-2">
+            <Radio className="w-4 h-4 text-hud-accent shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold text-hud-accent">{state.radioMessage.sender}</span>
+                <button
+                  type="button"
+                  onClick={() => soundEngine.speak(state.radioMessage!.text, 'kira')}
+                  className="text-[10px] text-hud-muted hover:text-hud-fg inline-flex items-center gap-1 min-h-11"
+                >
+                  <Volume2 className="w-3 h-3" /> Replay
+                </button>
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400">
-                    GPS ROUTE: {state.activeGPSRoute.destinationName}
-                  </span>
-                  <span className="text-[10px] font-mono font-bold text-slate-400">
-                    ({state.activeGPSRoute.totalDistance}m // ETA ~{state.activeGPSRoute.etaSeconds}s)
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-white leading-tight">
-                  {state.activeGPSRoute.nextTurnInstruction}
+              <p className="text-xs text-hud-fg mt-0.5 leading-snug line-clamp-3">{state.radioMessage.text}</p>
+            </div>
+          </div>
+        )}
+
+        <div data-hud="events" className="flex flex-col items-stretch gap-2 w-full">
+        {state.activeGPSRoute && (
+          <div className="hud-panel px-3 py-2 flex items-center gap-3 w-full">
+            <CornerUpRight className="w-5 h-5 text-hud-accent shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-hud-accent truncate">
+                {state.activeGPSRoute.destinationName}
+                <span className="ml-2 text-hud-muted tabular-nums font-mono normal-case tracking-normal">
+                  {state.activeGPSRoute.totalDistance}m
                 </span>
               </div>
-              <button
-                onClick={onClearGPS}
-                className="p-1 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800 transition cursor-pointer"
-                title="Cancel GPS Route"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="text-xs font-medium truncate">{state.activeGPSRoute.nextTurnInstruction}</div>
             </div>
-          )}
-
-          {/* Holographic Objective Navigation Compass (if no custom GPS route active) */}
-          {!state.activeGPSRoute && targetPos && !state.activeMission.completed && (
-            <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/50 rounded-2xl px-4 py-1.5 flex items-center gap-2.5 shadow-lg shadow-cyan-950/60">
-              <div 
-                className="w-6 h-6 rounded-full bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-300 transition-transform duration-100"
-                style={{ transform: `rotate(${state.objectiveAngleDeg}deg)` }}
-              >
-                <Navigation className="w-3.5 h-3.5 fill-cyan-400 text-cyan-400" />
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-[10px] font-black text-cyan-400 uppercase">OBJECTIVE</span>
-                <span className="text-xs font-mono font-black text-white">{state.objectiveDistance}m</span>
-              </div>
+            <button type="button" onClick={onClearGPS} className="hud-btn w-11 h-11" title="Clear GPS">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {!state.activeGPSRoute && targetPos && !state.activeMission.completed && (
+          <div className="hud-panel px-3 py-1.5 flex items-center gap-2">
+            <div style={{ transform: `rotate(${state.objectiveAngleDeg}deg)` }}>
+              <Navigation className="w-4 h-4 text-hud-accent fill-hud-accent" />
             </div>
-          )}
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-hud-muted">Objective</span>
+            <span className="text-sm font-mono tabular-nums">{state.objectiveDistance}m</span>
+          </div>
+        )}
+        {state.notification && (
+          <div className="hud-panel px-3 py-2 text-xs font-medium text-center">{state.notification}</div>
+        )}
+        {(state.chasePhase === 'running' || state.chasePhase === 'recovering') && (
+          <EventChip
+            icon={<Crosshair className="w-4 h-4" />}
+            label={state.chasePhase === 'recovering' ? 'Signal resetting' : 'Stay with the drone'}
+            value={`${state.chaseDistance}m`}
+            meter={state.chaseFailMeter}
+            hot={state.chaseFailMeter > 70}
+          />
+        )}
+        {state.isMiniDroneActive && (
+          <EventChip
+            icon={
+              state.droneBattery <= 22 ? (
+                <BatteryWarning className="w-4 h-4 text-hud-danger" />
+              ) : (
+                <BatteryCharging className="w-4 h-4" />
+              )
+            }
+            label={state.droneReturning ? 'Returning' : 'Recon drone'}
+            value={`${Math.round(state.droneBattery)}%`}
+            meter={state.droneBattery}
+            hot={state.droneBattery <= 22}
+          />
+        )}
+        {state.droneTagActive && (
+          <EventChip
+            icon={<Crosshair className="w-4 h-4" />}
+            label="Rogue drones"
+            value={`${state.droneTagTagged}/${state.droneTagTotal}`}
+          />
+        )}
+        {state.racePhase !== 'idle' && (
+          <EventChip
+            icon={<Timer className="w-4 h-4" />}
+            label={
+              state.racePhase === 'countdown'
+                ? `Get ready ${state.raceCountdownSec}`
+                : state.racePhase === 'racing'
+                ? `Gate ${state.raceGateIndex + 1}/${state.raceGateTotal}`
+                : state.racePhase === 'won'
+                ? 'Finished'
+                : 'DNF — ride START to retry'
+            }
+            value={
+              state.racePhase === 'countdown'
+                ? '0.0s'
+                : `${Math.min(state.raceTimeSec, state.raceParSec).toFixed(1)}s`
+            }
+            hot={state.racePhase === 'racing' && state.raceParSec - state.raceTimeSec < 8}
+          />
+        )}
+        {(state.chaosAlertLevel > 0 || state.chaosAlertProgress > 0) && (
+          <EventChip
+            icon={<AlertTriangle className="w-4 h-4 text-hud-danger" />}
+            label={`CHAOS ${CHAOS.levelNames[state.chaosAlertLevel] ?? 'Alert'}`}
+            value={`Lvl ${state.chaosAlertLevel}`}
+            meter={state.chaosAlertProgress}
+            hot={state.chaosPhase !== 'cooling'}
+          />
+        )}
+        {state.fuelLevel <= 20 && !state.isRefueling && (
+          <EventChip
+            icon={<BatteryWarning className="w-4 h-4 text-hud-warn" />}
+            label={state.fuelLevel <= 0 ? 'Solar crawl — empty' : 'Energy low'}
+            value={state.nearestFuelStation ? `${state.nearestFuelStation.name} ${state.nearestFuelStation.distance}m` : `${Math.round(state.fuelLevel)}%`}
+            hot
+          />
+        )}
+      </div>
+      </div>
 
-          {state.notification && (
-            <div className="animate-bounce bg-gradient-to-r from-cyan-600/90 to-blue-600/90 text-white font-extrabold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-lg border border-cyan-300/50 flex items-center gap-2 text-center">
-              <Sparkles className="w-4 h-4 text-yellow-300 animate-spin" />
-              <span>{state.notification}</span>
+      <div className="absolute top-0 right-0 pointer-events-auto flex flex-col items-end gap-2">
+        <div className="relative" data-hud="menu">
+          <button
+            id="hud-menu-btn"
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="hud-btn"
+            title="Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          {menuOpen && (
+            <div
+              id="hud-menu-panel"
+              className="hud-panel absolute right-0 top-12 z-40 w-52 p-2 flex flex-col gap-1"
+            >
+              <MenuRow id="hud-map-btn" icon={MapPin} label="City map" onClick={() => run(onOpenMap)} />
+              <MenuRow id="hud-missions-btn" icon={Compass} label="Missions" onClick={() => run(onOpenMissions)} />
+              <MenuRow id="hud-garage-btn" icon={Wrench} label="Garage" onClick={() => run(onOpenCustomizer)} />
+              <MenuRow id="hud-walkthrough-btn" icon={BookOpen} label="Guide" onClick={() => run(onOpenWalkthrough)} />
+              <MenuRow id="hud-settings-btn" icon={Settings} label="Settings" onClick={() => run(onOpenParental)} />
+              {onCycleCamera && (
+                <MenuRow id="touch-camera-btn" icon={Camera} label="Cycle camera" onClick={() => run(onCycleCamera)} />
+              )}
+              {onResetVehicle && (
+                <MenuRow id="touch-reset-btn" icon={RotateCcw} label="Reset bike" onClick={() => run(onResetVehicle)} />
+              )}
+              {onToggleTouchMode && (
+                <MenuRow
+                  id="touch-mode-toggle-btn"
+                  icon={Move}
+                  label={touchControlMode === 'joystick' ? 'Use D-pad' : 'Use stick'}
+                  onClick={() => run(onToggleTouchMode)}
+                />
+              )}
             </div>
           )}
         </div>
-
-        {/* Right: Radar MiniMap & Navigation Shortcut Controls */}
-        <div className={`pointer-events-auto flex items-start gap-3 ${touchControlsActive ? 'mt-11 sm:mt-12' : ''}`}>
-          {/* Quick Action Buttons */}
-          <div className="flex flex-col gap-1.5">
-            <button
-              id="hud-map-btn"
-              onClick={onOpenMap}
-              className="w-9 h-9 rounded-xl bg-slate-900/85 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer"
-              title="City Map & GPS Navigation (Explore Gas Stations & Landmarks)"
-            >
-              <MapPin className="w-4 h-4" />
-            </button>
-            <button
-              id="hud-walkthrough-btn"
-              onClick={onOpenWalkthrough}
-              className="w-9 h-9 rounded-xl bg-slate-900/85 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer"
-              title="Game Manual & Walkthrough Guide"
-            >
-              <BookOpen className="w-4 h-4" />
-            </button>
-            <button
-              id="hud-missions-btn"
-              onClick={onOpenMissions}
-              className="w-9 h-9 rounded-xl bg-slate-900/85 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer"
-              title="Mission Dossier"
-            >
-              <Compass className="w-4 h-4" />
-            </button>
-            <button
-              id="hud-garage-btn"
-              onClick={onOpenCustomizer}
-              className="w-9 h-9 rounded-xl bg-slate-900/85 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer"
-              title="V9 Garage & Customization"
-            >
-              <Wrench className="w-4 h-4" />
-            </button>
-            <button
-              id="hud-settings-btn"
-              onClick={onOpenParental}
-              className="w-9 h-9 rounded-xl bg-slate-900/85 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shadow-lg transition active:scale-95 cursor-pointer"
-              title="Settings & Parental Controls"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* MiniMap */}
-          <MiniMap 
-            playerPos={playerPos} 
-            playerRot={playerRot} 
-            bikePos={bikePos} 
-            targetPos={targetPos} 
+        <div data-hud="radar">
+          <MiniMap
+            playerPos={playerPos}
+            playerRot={playerRot}
+            bikePos={bikePos}
+            targetPos={targetPos}
             isRiding={state.isRiding}
             state={state}
           />
         </div>
       </div>
 
-      {/* ---------------- MIDDLE SECTION: ALERT & PROMPTS ---------------- */}
-      <div className="flex flex-col items-center justify-center gap-3">
-        {/* Downtown checkpoint sprint */}
-        {(state.chasePhase === 'running' || state.chasePhase === 'recovering') && (
-          <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
-            state.chaseFailMeter > 70
-              ? 'border-red-500/70 shadow-red-950/50'
-              : 'border-fuchsia-400/70 shadow-fuchsia-950/40'
-          }`}>
-            <Crosshair className={`w-5 h-5 ${state.chaseFailMeter > 70 ? 'text-red-400' : 'text-fuchsia-300'}`} />
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider text-fuchsia-300 flex items-center gap-2">
-                {state.chasePhase === 'recovering' ? 'Signal resetting…' : 'Stay with the drone'}
-                <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">
-                  lock {state.chaseCheckpoint}/{Math.max(1, state.chaseCheckpointTotal - 1)}
-                </span>
-              </div>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className={`text-lg font-mono font-black ${
-                  state.chaseDistance > 50 ? 'text-red-400' : 'text-white'
-                }`}>{state.chaseDistance}m</span>
-                <span className="text-[10px] font-bold text-slate-400">band 14–36m</span>
-              </div>
-              <div className="w-44 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${state.chaseFailMeter > 70 ? 'bg-red-500' : 'bg-fuchsia-400'}`}
-                  style={{ width: `${state.chaseFailMeter}%` }}
-                />
-              </div>
+      <div
+        className={`absolute left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-3 ${
+          touchControlsActive ? 'bottom-[17rem]' : 'bottom-4'
+        }`}
+      >
+        {showHudPrompts && (state.nearInteraction === 'refuel' || state.isRefueling) && (
+          <div className="hud-panel px-4 py-3 w-[min(100%,20rem)] text-center">
+            <div className="text-xs font-semibold">{state.nearestFuelStation?.name || 'Fuel station'}</div>
+            <div className="mt-2 h-2 rounded-full bg-hud-track overflow-hidden">
+              <div className="h-full bg-hud-ok" style={{ width: `${state.fuelLevel}%` }} />
             </div>
-          </div>
-        )}
-
-        {state.isMiniDroneActive && (
-          <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
-            state.droneReturning
-              ? 'border-amber-400/70 shadow-amber-950/40'
-              : state.droneBattery <= 22
-              ? 'border-red-500/70 shadow-red-950/40'
-              : 'border-purple-400/70 shadow-purple-950/40'
-          }`}>
-            {state.droneBattery <= 22
-              ? <BatteryWarning className="w-5 h-5 text-red-400" />
-              : <BatteryCharging className="w-5 h-5 text-purple-300" />}
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider text-purple-300">
-                {state.droneReturning ? 'Returning' : 'Recon drone'}
-              </div>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className={`text-lg font-mono font-black ${
-                  state.droneBattery <= 22 ? 'text-red-400' : 'text-white'
-                }`}>{Math.round(state.droneBattery)}%</span>
-                <span className="text-[10px] font-bold text-slate-400">battery</span>
-              </div>
-              <div className="w-40 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${
-                    state.droneBattery <= 22 ? 'bg-red-500' : 'bg-purple-400'
-                  }`}
-                  style={{ width: `${Math.max(0, Math.min(100, state.droneBattery))}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {state.droneTagActive && (
-          <div className="bg-slate-900/92 border border-orange-400/70 rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg shadow-orange-950/40">
-            <Crosshair className="w-5 h-5 text-orange-300" />
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider text-orange-300">
-                Rogue drones
-              </div>
-              <div className="text-lg font-mono font-black text-white mt-0.5">
-                {state.droneTagTagged}/{state.droneTagTotal} tagged
-              </div>
-            </div>
-          </div>
-        )}
-
-        {state.racePhase !== 'idle' && (
-          <div className={`bg-slate-900/92 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
-            state.racePhase === 'failed'
-              ? 'border-red-500/70 shadow-red-950/50'
-              : state.racePhase === 'won'
-              ? 'border-emerald-400/70 shadow-emerald-950/40'
-              : 'border-amber-400/70 shadow-amber-950/50'
-          }`}>
-            <Timer className={`w-5 h-5 ${
-              state.racePhase === 'failed' ? 'text-red-400' : 'text-amber-300'
-            }`} />
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
-                {state.racePhase === 'countdown' && `Get ready  ${state.raceCountdownSec}`}
-                {state.racePhase === 'racing' && `Gate ${state.raceGateIndex + 1}/${state.raceGateTotal}`}
-                {state.racePhase === 'won' && 'Finished!'}
-                {state.racePhase === 'failed' && 'DNF — ride START to retry'}
-              </div>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className={`text-lg font-mono font-black ${
-                  state.racePhase === 'racing' && state.raceParSec - state.raceTimeSec < 8
-                    ? 'text-red-400'
-                    : 'text-white'
-                }`}>
-                  {state.racePhase === 'countdown'
-                    ? '0.0'
-                    : Math.min(state.raceTimeSec, state.raceParSec).toFixed(1)}s
-                </span>
-                <span className="text-[10px] font-bold text-slate-400">/ {state.raceParSec.toFixed(0)}s</span>
-                {state.raceBestTimeSec != null && (
-                  <span className="text-[10px] font-bold text-cyan-300">best {state.raceBestTimeSec.toFixed(2)}s</span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CHAOS Alert Meter */}
-        {(state.chaosAlertLevel > 0 || state.chaosAlertProgress > 0) && (
-          <div className={`bg-slate-900/90 border rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg ${
-            state.chaosPhase === 'cooling'
-              ? 'border-amber-400/50 shadow-amber-950/40'
-              : 'border-red-500/60 shadow-red-950/60 animate-pulse'
-          }`}>
-            <AlertTriangle className={`w-5 h-5 ${state.chaosPhase === 'cooling' ? 'text-amber-300' : 'text-red-400'}`} />
-            <div>
-              <div className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-2 ${
-                state.chaosPhase === 'cooling' ? 'text-amber-300' : 'text-red-400'
-              }`}>
-                CHAOS {CHAOS.levelNames[state.chaosAlertLevel] ?? 'Alert'} (Lvl {state.chaosAlertLevel})
-                {state.chaosPhase === 'cooling' && (
-                  <span className="text-[9px] font-bold text-amber-200/80 normal-case tracking-normal">cooling</span>
-                )}
-              </div>
-              <div className="w-44 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all ${
-                    state.chaosPhase === 'cooling' ? 'bg-amber-400' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${state.chaosAlertProgress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Interactive Refueling Station Card */}
-        {(state.nearInteraction === 'refuel' || state.isRefueling) && (
-          <div className="pointer-events-auto bg-slate-950/95 border-2 border-emerald-400/80 rounded-2xl p-3 sm:p-4 shadow-2xl shadow-emerald-950/80 flex flex-col items-center gap-2 text-center max-w-xs animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-300 animate-pulse">
-                <BatteryCharging className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-white uppercase tracking-wider">
-                  {state.nearestFuelStation?.name || 'Cyber Fuel Station'}
-                </h4>
-                <span className="text-[10px] font-bold text-emerald-400">
-                  {state.isRefueling ? '⚡ Recharging Plasma Energy Cells...' : 'Recharge Pad In Range'}
-                </span>
-              </div>
-            </div>
-
-            {/* Live Refueling Progress Gauge */}
-            <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-emerald-500/50 p-0.5 mt-1">
-              <div 
-                className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-150 animate-pulse"
-                style={{ width: `${state.fuelLevel}%` }}
-              />
-            </div>
-            <div className="flex justify-between w-full text-[10px] font-mono font-bold text-emerald-300">
-              <span>Energy: {Math.round(state.fuelLevel)}%</span>
-              <span>Fast-Charge: 32 kW/s</span>
-            </div>
-
-            <button
-              onClick={onInteract}
-              className="mt-1 w-full bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-black text-xs py-2 px-4 rounded-xl border border-white shadow-lg flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
-            >
-              <Zap className="w-4 h-4 fill-slate-950" />
-              <span>{state.isRefueling ? '⚡ Fast-Charging (Hold Position)' : 'Tap or Press [E] to Refuel'}</span>
+            <button type="button" onClick={onInteract} className="hud-btn w-full mt-3 h-11 text-xs font-semibold text-hud-fg">
+              {state.isRefueling ? 'Charging — hold still' : 'Refuel'}
             </button>
           </div>
         )}
+        {showHudPrompts && state.nearInteraction === 'talk' && (
+          <button type="button" onClick={onInteract} className="hud-btn h-12 px-5 gap-2 text-sm font-semibold text-hud-fg">
+            <MessageSquare className="w-4 h-4" /> Talk
+          </button>
+        )}
+        {showHudPrompts && nearBike && (
+          <button type="button" onClick={onInteract} className="hud-btn h-12 px-5 gap-2 text-sm font-semibold text-hud-fg">
+            <Zap className="w-4 h-4" /> Mount V9
+          </button>
+        )}
 
-        {/* Low Fuel Critical Alert */}
-        {state.fuelLevel <= 20 && !state.isRefueling && (
-          <div className="bg-slate-900/90 border border-amber-500/60 rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg shadow-amber-950/60 animate-bounce">
-            <BatteryWarning className={`w-5 h-5 ${state.fuelLevel <= 0 ? 'text-red-400 animate-spin' : 'text-amber-400'}`} />
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-amber-300">
-                {state.fuelLevel <= 0 ? '⚠️ EMERGENCY SOLAR CRAWL (0% FUEL)' : '⚠️ V9 ENERGY CELLS LOW (<20%)'}
-              </div>
-              {state.nearestFuelStation && (
-                <div className="text-[10px] text-slate-300 font-semibold mt-0.5">
-                  Nearest Station: <span className="text-emerald-400 font-bold">{state.nearestFuelStation.name}</span> ({state.nearestFuelStation.distance}m)
-                </div>
-              )}
+        {!touchControlsActive && (
+          <div data-hud="speedo" className="hud-panel flex items-center gap-3 px-3 py-2">
+            <div className="flex items-baseline gap-1 min-w-[4.5rem]">
+              <span className="text-3xl font-semibold font-mono tabular-nums text-hud-accent leading-none">
+                {state.speedMPH}
+              </span>
+              <span className="text-[10px] font-semibold uppercase text-hud-muted">mph</span>
+            </div>
+            <div className="flex flex-col gap-1.5 w-28">
+              <Meter label="Energy" icon={<Fuel className="w-3 h-3" />} value={state.fuelLevel} hot={state.fuelLevel <= 20} />
+              <Meter label="Nitro" icon={<Flame className="w-3 h-3" />} value={state.nitroLevel} />
             </div>
           </div>
         )}
 
-        {/* Contextual Action Prompt for NPC Interaction */}
-        {state.nearInteraction === 'talk' && (
-          <div className="pointer-events-auto">
-            <button
-              onClick={onInteract}
-              className="animate-bounce bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-black text-xs sm:text-sm px-5 py-2.5 rounded-full border-2 border-white shadow-xl flex items-center gap-2 transition active:scale-95 cursor-pointer"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Press [E] or Tap to Talk</span>
-            </button>
-          </div>
-        )}
-
-        {/* Contextual Action Prompt for Mounting */}
-        {!state.isRiding && Math.hypot(playerPos.x - bikePos.x, playerPos.y - bikePos.y, playerPos.z - bikePos.z) < 4.5 && state.nearInteraction !== 'refuel' && state.nearInteraction !== 'talk' && (
-          <div className="pointer-events-auto">
-            <button
-              onClick={onInteract}
-              className="animate-bounce bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm px-5 py-2.5 rounded-full border-2 border-white shadow-xl flex items-center gap-2 transition active:scale-95 cursor-pointer"
-            >
-              <Zap className="w-4 h-4" />
-              <span>Press [E] or Tap to Mount V9</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ---------------- BOTTOM BAR (Centralized to keep Left & Right clear for Touch Controls) ---------------- */}
-      <div className="flex items-end justify-between w-full">
-        
-        {/* Left Spacer to guarantee zero overlap with left joystick */}
-        <div className="hidden md:block w-36 pointer-events-none" />
-
-        {/* Center: Futuristic Speedometer & Gauges + Gadget Quick Bar */}
-        <div className="pointer-events-auto flex flex-col items-center gap-2 mx-auto">
-          
-          {/* Speedometer & Energy Cells Cluster with Integrated Silent Mode Toggle */}
-          <div className="flex items-center gap-2">
-            {/* Silent Mode / Stealth Toggle */}
-            <button
-              id="silent-mode-toggle-btn"
-              onClick={onToggleSilent}
-              className={`px-3 py-2 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition shadow-lg cursor-pointer ${
-                state.isSilentMode
-                  ? 'bg-emerald-600/30 border-emerald-400 text-emerald-300'
-                  : 'bg-slate-900/85 backdrop-blur-md border-slate-700 text-slate-400 hover:text-white'
-              }`}
-              title="Toggle Silent Electric Mode (Press C)"
-            >
-              {state.isSilentMode ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
-              <span className="hidden sm:inline">{state.isSilentMode ? 'SILENT' : 'TURBO'}</span>
-            </button>
-
-            {/* Speedometer & Energy Cells Cluster */}
-            <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-500/40 rounded-2xl p-2 px-3.5 sm:px-4 flex items-center gap-3 shadow-xl shadow-cyan-950/50 relative">
-              {state.isDrifting && (
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-purple-500 text-white font-black text-[8px] px-2 py-0.5 rounded-full border border-purple-300 animate-bounce tracking-widest whitespace-nowrap">
-                  DRIFTING!
-                </span>
-              )}
-
-              {state.isRefueling && (
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 font-black text-[8px] px-2.5 py-0.5 rounded-full border border-emerald-200 animate-pulse tracking-widest shadow-md whitespace-nowrap">
-                  ⚡ FAST CHARGE!
-                </span>
-              )}
-
-              {state.fuelLevel <= 0 && (
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-[7px] px-2 py-0.5 rounded-full border border-red-300 animate-pulse tracking-wider shadow-md whitespace-nowrap">
-                  SOLAR CRAWL
-                </span>
-              )}
-
-              {/* Speed readout */}
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-300 tracking-tight">
-                  {state.speedMPH}
-                </span>
-                <span className="text-[9px] font-black text-cyan-500 uppercase">MPH</span>
-              </div>
-
-              <div className="h-7 w-px bg-slate-700/60" />
-
-              {/* Gauges Column */}
-              <div className="flex flex-col gap-1 w-24 sm:w-28">
-                {/* 1. Energy Cells */}
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between text-[8px] font-extrabold">
-                    <span className="flex items-center gap-0.5 text-emerald-400">
-                      <Fuel className="w-2.5 h-2.5" />
-                      ENG
-                    </span>
-                    <span className={`font-mono ${
-                      state.fuelLevel <= 20 
-                        ? 'text-red-400 animate-pulse' 
-                        : state.fuelLevel <= 45 
-                        ? 'text-amber-400' 
-                        : 'text-emerald-300'
-                    }`}>
-                      {Math.round(state.fuelLevel)}%
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-150 ${
-                        state.fuelLevel <= 20
-                          ? 'bg-gradient-to-r from-red-600 to-amber-500 animate-pulse'
-                          : state.fuelLevel <= 45
-                          ? 'bg-gradient-to-r from-amber-500 to-yellow-400'
-                          : 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400'
-                      }`}
-                      style={{ width: `${state.fuelLevel}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* 2. Nitro Gauge */}
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between text-[8px] font-extrabold text-amber-400">
-                    <span className="flex items-center gap-0.5">
-                      <Flame className="w-2.5 h-2.5 text-orange-400" />
-                      NITRO
-                    </span>
-                    <span className="font-mono text-amber-300">
-                      {Math.round(state.nitroLevel)}%
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                    <div 
-                      className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all"
-                      style={{ width: `${state.nitroLevel}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Center: Gadget Quick Bar */}
-          <div className="pointer-events-auto flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 p-1.5 rounded-2xl shadow-xl">
-            {[
-              { id: 'emp', label: 'EMP Tagger', key: '1', icon: Zap, color: 'text-cyan-400' },
-              { id: 'foam', label: 'Foam Blaster', key: '2', icon: Shield, color: 'text-orange-400' },
-              { id: 'drone', label: 'Mini Drone', key: '3', icon: Crosshair, color: 'text-purple-400' },
-              { id: 'hologram', label: 'Holo Decoy', key: '4', icon: Sparkles, color: 'text-yellow-400' },
-              { id: 'remote_v9', label: 'Remote V9', key: '5', icon: Gauge, color: 'text-emerald-400' },
-            ].map((gadget) => {
-              const isSelected = state.currentGadget === gadget.id;
-              const Icon = gadget.icon;
-              return (
-                <button
-                  key={gadget.id}
-                  id={`gadget-btn-${gadget.id}`}
-                  onClick={() => onSelectGadget(gadget.id as any)}
-                  className={`flex flex-col items-center justify-center w-10 h-11 sm:w-11 sm:h-12 rounded-xl border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-cyan-500/30 border-cyan-400 shadow-md shadow-cyan-500/30 scale-105'
-                      : 'bg-slate-800/80 border-slate-700 hover:bg-slate-700/80 text-slate-400'
-                  }`}
-                  title={`${gadget.label} (Press ${gadget.key} or [G] to fire)`}
-                >
-                  <span className="text-[8px] font-black text-slate-400">{gadget.key}</span>
-                  <Icon className={`w-3.5 h-3.5 ${gadget.color} mt-0.5`} />
-                  <span className="text-[7px] font-bold mt-0.5 text-slate-300 truncate max-w-[38px]">
-                    {gadget.label.split(' ')[0]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
+        <div data-hud="gadgets" className="hud-panel flex items-center gap-2 p-2">
+          <button
+            id="silent-mode-toggle-btn"
+            type="button"
+            onClick={onToggleSilent}
+            className={`hud-btn ${state.isSilentMode ? 'text-hud-ok border-hud-ok/40' : ''}`}
+            title="Silent mode"
+          >
+            {state.isSilentMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+          {GADGETS.map((g) => {
+            const selected = state.currentGadget === g.id;
+            const Icon = g.icon;
+            return (
+              <button
+                key={g.id}
+                id={`gadget-btn-${g.id}`}
+                type="button"
+                onClick={() => onSelectGadget(g.id)}
+                className={`hud-btn flex-col gap-0.5 w-11 h-11 ${selected ? 'border-hud-accent text-hud-accent' : 'text-hud-muted'}`}
+                title={`${g.label} (${g.key})`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="text-[9px] font-medium hidden sm:block">{g.label}</span>
+              </button>
+            );
+          })}
         </div>
-
-        {/* Right Spacer to guarantee zero overlap with right action cluster */}
-        <div className="hidden md:block w-36 pointer-events-none" />
-
       </div>
-
     </div>
   );
 };
+
+function Meter({
+  label,
+  icon,
+  value,
+  hot,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  value: number;
+  hot?: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[9px] font-semibold text-hud-muted">
+        <span className="inline-flex items-center gap-1">
+          {icon}
+          {label}
+        </span>
+        <span className={`tabular-nums ${hot ? 'text-hud-danger' : ''}`}>{Math.round(value)}%</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-hud-track overflow-hidden mt-0.5">
+        <div className={`h-full rounded-full ${hot ? 'bg-hud-danger' : 'bg-hud-accent'}`} style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function EventChip({
+  icon,
+  label,
+  value,
+  meter,
+  hot,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  meter?: number;
+  hot?: boolean;
+}) {
+  return (
+    <div className={`hud-panel px-3 py-2 flex items-center gap-2 w-full ${hot ? 'border-hud-danger/50' : ''}`}>
+      <span className="text-hud-accent">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-hud-muted truncate">{label}</div>
+        <div className="text-sm font-mono tabular-nums">{value}</div>
+        {meter != null && (
+          <div className="mt-1 h-1 rounded-full bg-hud-track overflow-hidden">
+            <div className={`h-full ${hot ? 'bg-hud-danger' : 'bg-hud-accent'}`} style={{ width: `${meter}%` }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MenuRow({
+  id,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  id: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      id={id}
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-3 min-h-11 px-2 rounded-[10px] text-sm text-hud-fg hover:bg-white/5 w-full text-left"
+    >
+      <Icon className="w-4 h-4 text-hud-accent" />
+      {label}
+    </button>
+  );
+}

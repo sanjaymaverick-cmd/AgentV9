@@ -1,1 +1,147 @@
 @import "tailwindcss";
+
+@theme {
+  --color-hud-bg: #0c1016;
+  --color-hud-panel: rgb(12 16 22 / 0.82);
+  --color-hud-fg: #e8eef4;
+  --color-hud-muted: #8b97a6;
+  --color-hud-line: rgb(232 238 244 / 0.14);
+  --color-hud-accent: #7dd3e8;
+  --color-hud-accent-fg: #071018;
+  --color-hud-warn: #e8b86d;
+  --color-hud-danger: #e07a7a;
+  --color-hud-ok: #7dcea0;
+  --color-hud-track: rgb(0 0 0 / 0.4);
+  --radius-hud: 16px;
+  --radius-hud-sm: 10px;
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.hud-safe {
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+.hud-panel {
+  background: var(--color-hud-panel);
+  color: var(--color-hud-fg);
+  border: 1px solid var(--color-hud-line);
+  border-radius: var(--radius-hud);
+  backdrop-filter: blur(10px);
+}
+
+.hud-btn {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-hud-sm);
+  border: 1px solid var(--color-hud-line);
+  background: rgb(12 16 22 / 0.88);
+  color: var(--color-hud-accent);
+  transition: transform 150ms ease, background 150ms ease, color 150ms ease;
+}
+.hud-btn:active {
+  transform: scale(0.98);
+}
+
+.hud-modal-close {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-hud-sm);
+  border: 1px solid var(--color-hud-line);
+  background: rgb(12 16 22 / 0.88);
+  color: var(--color-hud-muted);
+}
+
+.touch-btn {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 4px;
+  border-radius: var(--radius-hud-sm);
+  border: 1px solid var(--color-hud-line);
+  background: rgb(12 16 22 / 0.88);
+  color: var(--color-hud-fg);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: transform 150ms ease, background 150ms ease, color 150ms ease;
+}
+.touch-btn:active {
+  transform: scale(0.98);
+  background: var(--color-hud-accent);
+  color: var(--color-hud-accent-fg);
+}
+.touch-btn-lg {
+  min-width: 52px;
+  min-height: 52px;
+}
+.touch-btn-warn {
+  color: var(--color-hud-warn);
+  border-color: color-mix(in oklab, var(--color-hud-warn) 45%, transparent);
+}
+
+.touch-stick {
+  width: 7rem;
+  height: 7rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-hud-line);
+  background: rgb(12 16 22 / 0.75);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+.touch-stick-look {
+  width: 5.5rem;
+  height: 5.5rem;
+}
+.touch-thumb {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background: var(--color-hud-accent);
+  border: 2px solid var(--color-hud-fg);
+  pointer-events: none;
+}
+.touch-thumb-sm {
+  width: 2rem;
+  height: 2rem;
+}
+
+@media (min-width: 640px) {
+  .touch-stick {
+    width: 9rem;
+    height: 9rem;
+  }
+  .touch-stick-look {
+    width: 6.5rem;
+    height: 6.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-btn,
+  .touch-btn {
+    transition: none;
+  }
+}

@@ -1,6 +1,6 @@
 # Roadmap — what's done, what's left
 
-Last refreshed **2026-08-31** against `main` (`dac1c63` + this camera/dismount pass).
+Last refreshed **2026-09-01** against `main` (HUD four-corner pass).
 The 70% audit below that date is historical; **do not treat the stub list as current.**
 
 ## Verdict
@@ -37,7 +37,7 @@ Capacitor Android wrapper, quality presets, signed AAB. What is still open is
 | §19 | Racing | Downtown checkpoint sprint, timer, best time in save |
 | §20 | Traffic & peds | Quality-scaled pool (LOW 2 / MED 4 / HIGH 8) |
 | §21 | Save | Versioned `SaveManager` + migrate; full mission/pos/disguise/CHAOS |
-| §23 | HUD | Mission, speedo, fuel/nitro, radar, GPS, gadget bar |
+| §23 | HUD | Four-corner overlay: identity, events, Menu+132px radar, lifted gadgets; overflow Menu; 44px targets |
 | §24 | Accessibility | Steering assist, waypoints, walkthrough, forgiving failure |
 | §26 | Quality | LOW / MED / HIGH + auto-detect; **tablets never auto HIGH**; drawing-buffer budget |
 | §27–§30 | Android wrapper | Capacitor `com.velocitynine.agentv9`, landscape, no INTERNET, icons/splash |

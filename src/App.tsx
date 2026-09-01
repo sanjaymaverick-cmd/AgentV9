@@ -7,6 +7,7 @@ import { HUD } from './components/HUD';
 import { TouchControls } from './components/TouchControls';
 import { PerfChip } from './components/PerfChip';
 import { soundEngine } from './game/audio';
+import { Shield } from 'lucide-react';
 
 const CustomizerModal = lazy(() => import('./components/CustomizerModal').then((m) => ({ default: m.CustomizerModal })));
 const MissionsModal = lazy(() => import('./components/MissionsModal').then((m) => ({ default: m.MissionsModal })));
@@ -15,13 +16,10 @@ const WalkthroughModal = lazy(() => import('./components/WalkthroughModal').then
 const MapExplorerModal = lazy(() => import('./components/MapExplorerModal').then((m) => ({ default: m.MapExplorerModal })));
 const NPCDialogueModal = lazy(() => import('./components/NPCDialogueModal').then((m) => ({ default: m.NPCDialogueModal })));
 
-// Dev-only debug overlay (spec §33). The conditional dynamic import means neither this
-// module nor the engine.debug* methods it calls are emitted in a production build.
 const DebugMenu = import.meta.env.DEV
   ? React.lazy(() => import('./components/DebugMenu'))
   : null;
 
-// Trivial device-local settings live outside the versioned save (see saveManager.ts).
 const STORAGE_KEY_SETTINGS = 'agent_v9_settings_v1';
 
 function wantPerfHud(): boolean {
@@ -41,7 +39,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   steeringAssist: 0.5,
   timeLimitMinutes: 0,
   touchControls: true,
-  qualityLevel: 'medium', // replaced by auto-detect on first launch (see settings init)
+  qualityLevel: 'medium',
   touchControlMode: 'joystick',
   showControlsHelper: true,
   showPerfHud: false,
@@ -53,7 +51,6 @@ export default function App() {
 
   const [gameState, setGameState] = useState<GameState | null>(null);
 
-  // One versioned save, loaded (and migrated) once for this mount.
   const [initialSave] = useState<SaveDataV1 | null>(() => SaveManager.load());
   const [customization, setCustomization] = useState<VehicleCustomization>(
     () => initialSave?.customization ?? DEFAULT_CUSTOMIZATION
@@ -67,7 +64,6 @@ export default function App() {
     } catch {
       /* fall through to defaults */
     }
-    // qualityLevel: honour a stored choice; else migrate the old boolean; else auto-detect.
     const qualityLevel: GameSettings['qualityLevel'] =
       stored.qualityLevel ??
       (typeof stored.highQualityGraphics === 'boolean'
@@ -87,7 +83,6 @@ export default function App() {
     };
   });
 
-  // Modals state
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [showMissions, setShowMissions] = useState(false);
   const [showParental, setShowParental] = useState(false);
@@ -98,7 +93,6 @@ export default function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [audioStarted, setAudioStarted] = useState(false);
 
-  // Game engine is a separate chunk (spec §25 / D2) so the first paint isn't 1 MB of Three.js.
   useEffect(() => {
     if (!containerRef.current || engineRef.current) return;
     const el = containerRef.current;
@@ -110,8 +104,6 @@ export default function App() {
 
     import('./game/gameEngine').then(({ GameEngine }) => {
       if (cancelled || !el) return;
-      // Wait one frame so the canvas container has a non-zero layout size (WebGL shaders
-      // fail to compile on a 0×0 drawing buffer in some Chromium/swiftshader setups).
       requestAnimationFrame(() => {
         if (cancelled || !el) return;
         engine = new GameEngine(el, custom, sets, save ?? undefined);
@@ -133,7 +125,6 @@ export default function App() {
     };
   }, []);
 
-  // Track session play timer
   useEffect(() => {
     const interval = setInterval(() => {
       setSessionMinutes((prev) => {
@@ -147,7 +138,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [settings.timeLimitMinutes]);
 
-  // "Tap to start" audio gate — unlock the AudioContext from a real user gesture.
   const handleStartAudio = () => {
     soundEngine.unlock();
     soundEngine.startMusic();
@@ -158,18 +148,15 @@ export default function App() {
     });
   };
 
-  // Handle Customizer Save
   const handleSaveCustomization = (newCustom: VehicleCustomization, newDisguise: DisguiseType) => {
     setCustomization(newCustom);
     if (engineRef.current) {
-      // Both calls flag an autosave; SaveManager writes the new look with the rest of progress.
       engineRef.current.equipDisguise(newDisguise);
       engineRef.current.updateCustomization(newCustom);
     }
     setShowCustomizer(false);
   };
 
-  // Handle Settings Update
   const handleUpdateSettings = (newSettings: GameSettings) => {
     const prev = settings;
     setSettings(newSettings);
@@ -182,7 +169,6 @@ export default function App() {
     }
   };
 
-  // Dev-only: toggle the debug overlay with the backtick key.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     const onKey = (e: KeyboardEvent) => {
@@ -195,7 +181,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Handle GPS route set from Map Explorer or Walkthrough
   const handleSetGPS = (target: CityPOI | [number, number, number], customName?: string) => {
     if (engineRef.current) {
       engineRef.current.setGPSDestination(target, customName);
@@ -209,36 +194,32 @@ export default function App() {
   };
 
   return (
-    <main className="relative w-screen h-screen overflow-hidden bg-slate-950 text-white font-sans select-none">
-      
-      {/* 3D WebGL Canvas Container */}
-      <div 
-        ref={containerRef} 
+    <main className="relative w-screen h-screen overflow-hidden bg-hud-bg text-hud-fg font-sans select-none">
+      <div
+        ref={containerRef}
         id="game-canvas-container"
         className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
       />
 
-      {/* Tap-to-Start Audio Gate — unlocks the AudioContext on a real gesture */}
       {!audioStarted && (
         <button
+          id="tap-to-start"
           onClick={handleStartAudio}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-slate-950/95 backdrop-blur-sm cursor-pointer text-center p-6"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-hud-bg/95 text-center p-6"
         >
-          <span className="text-5xl sm:text-6xl animate-bounce">🏍️</span>
-          <span className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-cyan-300">
+          <span className="w-16 h-16 rounded-2xl bg-hud-accent/15 border border-hud-line flex items-center justify-center">
+            <Shield className="w-8 h-8 text-hud-accent" />
+          </span>
+          <span className="text-2xl sm:text-3xl font-semibold tracking-wide text-hud-fg">
             Agent V9: Velocity City
           </span>
-          <span className="mt-2 px-6 py-3 rounded-2xl bg-cyan-500 text-slate-950 font-black text-lg uppercase tracking-wide shadow-lg shadow-cyan-500/30">
+          <span className="mt-1 px-6 min-h-11 rounded-2xl bg-hud-accent text-hud-accent-fg font-semibold text-base inline-flex items-center">
             Tap to Start
           </span>
-          <span className="text-xs text-slate-400 mt-1">Turns on engine sounds, music and mission voice</span>
-          <span className="text-[11px] text-cyan-200/80 mt-2 font-semibold">
-            Rotate the tablet sideways for the best ride. FPS chip is on for this tablet check.
-          </span>
+          <span className="text-xs text-hud-muted">Turns on engine sounds, music and mission voice</span>
         </button>
       )}
 
-      {/* Primary HUD Overlay */}
       {gameState && engineRef.current && (
         <HUD
           state={gameState}
@@ -254,15 +235,23 @@ export default function App() {
           onSelectGadget={(g) => engineRef.current?.switchGadget(g)}
           onToggleSilent={() => engineRef.current?.toggleSilentOrCrouch()}
           onInteract={() => engineRef.current?.handleInteractAction()}
+          onCycleCamera={() => engineRef.current?.cycleCameraMode()}
+          onResetVehicle={() => engineRef.current?.resetVehicle()}
+          onToggleTouchMode={() =>
+            handleUpdateSettings({
+              ...settings,
+              touchControlMode: settings.touchControlMode === 'joystick' ? 'dpad' : 'joystick',
+            })
+          }
+          touchControlMode={settings.touchControlMode}
           touchControlsActive={settings.touchControls && !gameState.gamepadConnected}
         />
       )}
 
-      {/* On-Screen Touch Controls — auto-hidden while a gamepad is connected */}
       {gameState && settings.touchControls && !gameState.gamepadConnected && (
         <TouchControls
-          engine={engineRef.current} 
-          isRiding={gameState.isRiding} 
+          engine={engineRef.current}
+          isRiding={gameState.isRiding}
           settings={settings}
           onUpdateSettings={handleUpdateSettings}
         />
@@ -271,7 +260,6 @@ export default function App() {
       {(settings.showPerfHud || wantPerfHud()) && <PerfChip />}
 
       <Suspense fallback={null}>
-      {/* Modal: Interactive NPC Dialogue */}
       {gameState && gameState.activeNPCDialogue && (
         <NPCDialogueModal
           dialogueState={gameState.activeNPCDialogue}
@@ -281,7 +269,6 @@ export default function App() {
         />
       )}
 
-      {/* Modal: City Map & GPS Explorer */}
       {showMap && gameState && engineRef.current && (
         <MapExplorerModal
           isOpen={showMap}
@@ -294,7 +281,6 @@ export default function App() {
         />
       )}
 
-      {/* Modal: Game Walkthrough & Manual */}
       {showWalkthrough && (
         <WalkthroughModal
           isOpen={showWalkthrough}
@@ -303,7 +289,6 @@ export default function App() {
         />
       )}
 
-      {/* Modal: V9 Customization Garage */}
       {showCustomizer && gameState && (
         <CustomizerModal
           customization={customization}
@@ -314,7 +299,6 @@ export default function App() {
         />
       )}
 
-      {/* Modal: Missions Dossier */}
       {showMissions && gameState && (
         <MissionsModal
           activeMission={gameState.activeMission}
@@ -323,7 +307,6 @@ export default function App() {
         />
       )}
 
-      {/* Modal: Parental & Settings */}
       {showParental && (
         <ParentalModal
           settings={settings}
@@ -333,25 +316,23 @@ export default function App() {
       )}
       </Suspense>
 
-      {/* Parental Play Time Reminder Alert */}
       {showTimeReminder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 max-w-md w-full shadow-2xl text-center">
-            <h3 className="text-xl font-black text-amber-300 uppercase">Agent Break Time!</h3>
-            <p className="text-sm text-slate-300 mt-2">
-              You have been playing for {sessionMinutes} minutes. It is a great time to stretch and rest your eyes!
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <div className="bg-hud-bg border border-hud-line rounded-3xl p-6 max-w-md w-full text-center text-hud-fg">
+            <h3 className="text-xl font-semibold">Agent break time</h3>
+            <p className="text-sm text-hud-muted mt-2">
+              You have been playing for {sessionMinutes} minutes. Stretch and rest your eyes.
             </p>
             <button
               onClick={() => setShowTimeReminder(false)}
-              className="mt-5 px-6 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm uppercase cursor-pointer"
+              className="mt-5 px-6 min-h-11 rounded-2xl bg-hud-accent text-hud-accent-fg font-semibold text-sm"
             >
-              Got It, Agent!
+              Got it
             </button>
           </div>
         </div>
       )}
 
-      {/* Dev-only debug overlay — absent from production builds */}
       {DebugMenu && showDebug && gameState && engineRef.current && (
         <React.Suspense fallback={null}>
           <DebugMenu
@@ -361,7 +342,6 @@ export default function App() {
           />
         </React.Suspense>
       )}
-
     </main>
   );
 }

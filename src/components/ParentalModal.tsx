@@ -31,7 +31,7 @@ export const ParentalModal: React.FC<ParentalModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+            className="hud-modal-close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -149,13 +149,13 @@ export const ParentalModal: React.FC<ParentalModalProps> = ({
             </p>
             <button
               onClick={() => onUpdateSettings({ ...settings, showPerfHud: !settings.showPerfHud })}
-              className={`mt-2 w-full py-2 rounded-xl border text-xs font-bold transition cursor-pointer ${
+              className={`mt-2 w-full min-h-11 rounded-xl border text-xs font-bold transition cursor-pointer ${
                 settings.showPerfHud
-                  ? 'bg-fuchsia-500 text-slate-950 border-fuchsia-400'
+                  ? 'bg-hud-accent text-hud-accent-fg border-hud-accent'
                   : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800'
               }`}
             >
-              {settings.showPerfHud ? 'FPS overlay ON' : 'Show FPS overlay (tablet check)'}
+              {settings.showPerfHud ? 'FPS overlay ON' : 'Show FPS overlay'}
             </button>
           </div>
 
