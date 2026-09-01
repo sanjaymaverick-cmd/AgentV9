@@ -43,6 +43,15 @@ export interface AgentV9Probe {
   applyQuality(level: QualityLevel): void;
   teleport(pos: [number, number, number]): void;
   setThrottle(on: boolean): void;
+  /** QA: held keys, same mapping as the keyboard. `[]` clears. */
+  setKeys(codes: string[]): void;
+  getYaw(): number;
+  getSpeed(): number;
+  setYaw(rad: number): void;
+  getPlayerPos(): [number, number, number];
+  getCameraPos(): [number, number, number];
+  isRiding(): boolean;
+  dismount(): void;
 }
 
 declare global {
@@ -157,6 +166,17 @@ export class PerfHarness {
     this.e.input.analogThrottle = on ? 1 : 0;
   }
 
+  setKeys(codes: string[]) {
+    const has = (c: string) => codes.includes(c);
+    const e = this.e;
+    e.input.forward = has('KeyW') || has('ArrowUp');
+    e.input.backward = has('KeyS') || has('ArrowDown');
+    e.input.left = has('KeyA') || has('ArrowLeft');
+    e.input.right = has('KeyD') || has('ArrowRight');
+    e.input.analogThrottle = 0;
+    e.input.analogSteer = 0;
+  }
+
   private attach() {
     const e = this.e;
     const probe: AgentV9Probe = {
@@ -169,6 +189,22 @@ export class PerfHarness {
       },
       teleport: (pos) => this.teleport(pos),
       setThrottle: (on) => this.setThrottle(on),
+      setKeys: (codes) => this.setKeys(codes),
+      getYaw: () => (e.state.isRiding ? e.bikeRot : e.playerRot),
+      setYaw: (rad: number) => {
+        e.bikeRot = rad;
+        e.playerRot = rad;
+        e.cameraYaw = rad;
+        e.cameraRig.resetLook();
+      },
+      getSpeed: () => e.bikeSpeed,
+      getPlayerPos: () => [e.playerPos.x, e.playerPos.y, e.playerPos.z],
+      getCameraPos: () => [e.camera.position.x, e.camera.position.y, e.camera.position.z],
+      isRiding: () => e.state.isRiding,
+      dismount: () => {
+        e.bikeSpeed = 0;
+        if (e.state.isRiding) e.handleInteractAction();
+      },
     };
     if (typeof window !== 'undefined') window.__agentV9 = probe;
   }

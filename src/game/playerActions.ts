@@ -61,24 +61,7 @@ export class PlayerActions {
     const e = this.e;
     if (e.isEscortingOut) return;
 
-    // 0. Advance NPC Dialogue if active
-    if (e.state.activeNPCDialogue) {
-      e.advanceNPCDialogue();
-      return;
-    }
-
-    // 0.1 Check for Nearby NPC to talk
-    const pTarget = e.state.isRiding ? e.bikePos : e.playerPos;
-    if (e.world.npcLocals) {
-      for (const npc of e.world.npcLocals) {
-        if (pTarget.distanceTo(npc.obj.position) < 4.2) {
-          e.talkToNPC(npc.data.id);
-          return;
-        }
-      }
-    }
-
-    // 1. Mount / Dismount V9
+    // 1. Mount / Dismount V9 — riding is never a conversation.
     const distToBike = e.playerPos.distanceTo(e.bikePos);
     if (!e.state.isRiding && distToBike < 4.2 && !e.state.isMiniDroneActive) {
       // Mount
@@ -110,6 +93,23 @@ export class PlayerActions {
       e.requestAutosave();
       e.notifyState();
       return;
+    }
+
+    // 0. Advance NPC Dialogue if active
+    if (e.state.activeNPCDialogue) {
+      e.advanceNPCDialogue();
+      return;
+    }
+
+    // 0.1 Check for Nearby NPC to talk
+    const pTarget = e.state.isRiding ? e.bikePos : e.playerPos;
+    if (e.world.npcLocals) {
+      for (const npc of e.world.npcLocals) {
+        if (pTarget.distanceTo(npc.obj.position) < 4.2) {
+          e.talkToNPC(npc.data.id);
+          return;
+        }
+      }
     }
 
     // 2. Disguise Lockers
